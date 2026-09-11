@@ -1,0 +1,10 @@
+import Link from "next/link";
+import { FadeIn } from "@/components/motion";
+import { SiteHeader } from "@/components/site-header";
+
+export default function Home() {
+  return <main className="grain min-h-screen overflow-hidden bg-ink text-paper"><SiteHeader dark /><section className="relative flex min-h-[calc(100vh-80px)] flex-col justify-center px-5 pb-20 pt-12 md:px-16 md:pb-28 md:pt-20"><div className="pointer-events-none absolute -right-20 top-16 h-72 w-72 rounded-full border border-paper/20 md:right-24 md:top-20 md:h-[30rem] md:w-[30rem]" /><div className="pointer-events-none absolute right-20 top-44 h-40 w-40 rounded-full bg-[#d4f05d] blur-[1px] md:right-64 md:top-48 md:h-64 md:w-64" />
+    <FadeIn className="relative z-10 max-w-5xl"><p className="mb-10 text-[10px] uppercase tracking-[.3em] text-paper/55">A museum, made of memories</p><h1 className="display max-w-4xl text-[clamp(4.2rem,12vw,10rem)] leading-[.82]">The things<br /><span className="italic text-[#d4f05d]">that make</span><br />you, you.</h1><div className="mt-12 flex flex-col items-start gap-5 sm:flex-row sm:items-center"><Link href="/create" className="inline-flex h-14 items-center rounded-full bg-accent px-8 text-sm font-medium text-ink transition-transform hover:scale-[1.03]">Create your museum <span className="ml-5 text-lg">↗</span></Link><span className="max-w-[190px] text-xs leading-relaxed text-paper/50">A gift made by the people who know you best.</span></div></FadeIn>
+    <div className="absolute bottom-8 left-5 right-5 flex items-end justify-between border-t border-paper/15 pt-4 text-[10px] uppercase tracking-[.18em] text-paper/40 md:left-16 md:right-16"><span>Est. 2024 / Everywhere</span><span>Scroll to enter ↓</span></div>
+  </section><div className="overflow-hidden border-y border-paper/10 py-4 text-[10px] uppercase tracking-[.25em] text-paper/40"><div className="flex w-max animate-marquee gap-10"><span>Memory is an object</span><span>•</span><span>Every person is a collection</span><span>•</span><span>Memory is an object</span><span>•</span><span>Every person is a collection</span></div></div></main>;
+}

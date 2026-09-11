@@ -1,0 +1,10 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/auth/page": "app/auth/page.js",
+  "/create/page": "app/create/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/m/[token]/page": "app/m/[token]/page.js",
+  "/museum/[slug]/share/page": "app/museum/[slug]/share/page.js",
+  "/page": "app/page.js",
+  "/museum/[slug]/page": "app/museum/[slug]/page.js"
+}
