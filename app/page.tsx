@@ -1,10 +1,28 @@
-import Link from "next/link";
-import { FadeIn } from "@/components/motion";
+﻿import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import { CreateLink, TrackEvent } from "@/components/analytics";
+import { MemoryUniverse } from "@/components/memory-universe";
+import { SiteFooter } from "@/components/site-footer";
 
 export default function Home() {
-  return <main className="grain min-h-screen overflow-hidden bg-ink text-paper"><SiteHeader dark /><section className="relative flex min-h-[calc(100vh-80px)] flex-col justify-center px-5 pb-20 pt-12 md:px-16 md:pb-28 md:pt-20"><div className="pointer-events-none absolute -right-20 top-16 h-72 w-72 rounded-full border border-paper/20 md:right-24 md:top-20 md:h-[30rem] md:w-[30rem]" /><div className="pointer-events-none absolute right-20 top-44 h-40 w-40 rounded-full bg-[#d4f05d] blur-[1px] md:right-64 md:top-48 md:h-64 md:w-64" />
-    <FadeIn className="relative z-10 max-w-5xl"><p className="mb-10 text-[10px] uppercase tracking-[.3em] text-paper/55">A museum, made of memories</p><h1 className="display max-w-4xl text-[clamp(4.2rem,12vw,10rem)] leading-[.82]">The things<br /><span className="italic text-[#d4f05d]">that make</span><br />you, you.</h1><div className="mt-12 flex flex-col items-start gap-5 sm:flex-row sm:items-center"><Link href="/create" className="inline-flex h-14 items-center rounded-full bg-accent px-8 text-sm font-medium text-ink transition-transform hover:scale-[1.03]">Create your museum <span className="ml-5 text-lg">↗</span></Link><span className="max-w-[190px] text-xs leading-relaxed text-paper/50">A gift made by the people who know you best.</span></div></FadeIn>
-    <div className="absolute bottom-8 left-5 right-5 flex items-end justify-between border-t border-paper/15 pt-4 text-[10px] uppercase tracking-[.18em] text-paper/40 md:left-16 md:right-16"><span>Est. 2024 / Everywhere</span><span>Scroll to enter ↓</span></div>
-  </section><div className="overflow-hidden border-y border-paper/10 py-4 text-[10px] uppercase tracking-[.25em] text-paper/40"><div className="flex w-max animate-marquee gap-10"><span>Memory is an object</span><span>•</span><span>Every person is a collection</span><span>•</span><span>Memory is an object</span><span>•</span><span>Every person is a collection</span></div></div></main>;
+  return <main className="app-shell grain"><TrackEvent event="landing_view" /><SiteHeader />
+    <section className="home-hero">
+      <div className="hero-copy"><p className="eyebrow">✦ A portrait only your friends could make</p>
+        <h1 className="display">You are a thousand<br /><em>little things.</em></h1>
+        <p>A song. A place. The way you take your coffee.<br />Let your friends turn the things that remind them of you into a museum.</p>
+        <div className="hero-actions"><CreateLink source="landing" className="primary-link">Create your museum <span>↗</span></CreateLink><Link href="/demo" className="quiet-link">Step inside a sample <span>→</span></Link></div>
+        <small className="hero-footnote">Free to create · No account needed for your friends</small>
+      </div>
+      <MemoryUniverse portrait />
+    </section>
+    <section id="how-it-works" className="home-section"><div className="section-heading"><div><p className="eyebrow mb-5">Not a profile. A feeling.</p><h2 className="display">A whole world.<br /><em className="gold-text">And you at the centre.</em></h2></div><p>We leave little pieces of ourselves with the people we love. This is a place to bring them all together.</p></div>
+      <div className="steps-grid">{[
+        ["01", "Make a little space", "Give your museum a name. Choose how many memories will open its doors."],
+        ["02", "Let your people in", "Send a private invitation. Each friend adds one thing that feels unmistakably like you."],
+        ["03", "Meet yourself again", "When the collection is complete, discover your museum and share a little piece of it."],
+      ].map(([number,title,copy]) => <article className="step" key={number}><span>{number} /</span><h3>{title}</h3><p>{copy}</p></article>)}</div>
+    </section>
+    <section className="closing-invitation"><p className="eyebrow">Some things can only be seen by others</p><h2 className="display">What does <em className="gold-text">your world</em><br />look like to them?</h2><CreateLink source="landing" className="primary-link">Start your collection <span>↗</span></CreateLink><p>Memories stay hidden while collecting.<br />Your gallery becomes public when its doors open.</p></section>
+    <SiteFooter />
+  </main>;
 }

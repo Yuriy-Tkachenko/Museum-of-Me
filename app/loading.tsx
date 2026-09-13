@@ -1,0 +1,2 @@
+﻿export default function Loading() { return <div role="status" className="mx-auto flex min-h-[65svh] max-w-5xl flex-col items-center justify-center px-6 py-24"><div aria-hidden="true" className="mb-9 flex h-24 w-24 animate-pulse items-center justify-center rounded-full border border-accent/30 text-4xl text-accent">✦</div><p className="eyebrow">Opening the room…</p><p className="display mt-4 text-3xl text-muted">A little world is waiting.</p></div>; }
+

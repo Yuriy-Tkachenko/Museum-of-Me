@@ -1,0 +1,2 @@
+-- Optional local seed entrypoint. Prefer `npm run seed:mock`, which creates
+-- the local auth user first and then seeds rows through the Supabase API.

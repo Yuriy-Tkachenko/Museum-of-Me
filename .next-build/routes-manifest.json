@@ -12,13 +12,98 @@
       "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
     }
   ],
-  "headers": [],
+  "headers": [
+    {
+      "source": "/:path*",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000"
+        }
+      ],
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+    },
+    {
+      "source": "/api/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ],
+      "regex": "^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+    },
+    {
+      "source": "/m/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        }
+      ],
+      "regex": "^/m(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+    },
+    {
+      "source": "/dashboard",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        }
+      ],
+      "regex": "^/dashboard(?:/)?$"
+    }
+  ],
   "rewrites": {
     "beforeFiles": [],
     "afterFiles": [],
     "fallback": []
   },
   "dynamicRoutes": [
+    {
+      "page": "/api/invites/[token]/preview",
+      "regex": "^/api/invites/([^/]+?)/preview(?:/)?$",
+      "routeKeys": {
+        "nxtPtoken": "nxtPtoken"
+      },
+      "namedRegex": "^/api/invites/(?<nxtPtoken>[^/]+?)/preview(?:/)?$"
+    },
+    {
+      "page": "/api/museums/[token]/exhibits",
+      "regex": "^/api/museums/([^/]+?)/exhibits(?:/)?$",
+      "routeKeys": {
+        "nxtPtoken": "nxtPtoken"
+      },
+      "namedRegex": "^/api/museums/(?<nxtPtoken>[^/]+?)/exhibits(?:/)?$"
+    },
+    {
+      "page": "/api/museums/[token]/poster",
+      "regex": "^/api/museums/([^/]+?)/poster(?:/)?$",
+      "routeKeys": {
+        "nxtPtoken": "nxtPtoken"
+      },
+      "namedRegex": "^/api/museums/(?<nxtPtoken>[^/]+?)/poster(?:/)?$"
+    },
     {
       "page": "/m/[token]",
       "regex": "^/m/([^/]+?)(?:/)?$",
@@ -64,6 +149,12 @@
       "namedRegex": "^/auth(?:/)?$"
     },
     {
+      "page": "/auth/callback",
+      "regex": "^/auth/callback(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/callback(?:/)?$"
+    },
+    {
       "page": "/create",
       "regex": "^/create(?:/)?$",
       "routeKeys": {},
@@ -74,6 +165,18 @@
       "regex": "^/dashboard(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/dashboard(?:/)?$"
+    },
+    {
+      "page": "/demo",
+      "regex": "^/demo(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/demo(?:/)?$"
+    },
+    {
+      "page": "/privacy",
+      "regex": "^/privacy(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/privacy(?:/)?$"
     }
   ],
   "dataRoutes": [],

@@ -7,11 +7,11 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#171613",
-        paper: "#f5f3ee",
-        muted: "#8d8a83",
-        line: "#dedbd3",
-        accent: "#d4f05d",
+        ink: "#f4eadc",
+        paper: "#11100e",
+        muted: "#aca193",
+        line: "#393126",
+        accent: "#ddb578",
       },
       fontFamily: {
         sans: ["var(--font-geist)", "Arial", "sans-serif"],

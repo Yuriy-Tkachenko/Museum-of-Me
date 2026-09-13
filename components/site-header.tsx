@@ -1,33 +1,26 @@
-"use client";
-
+﻿"use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LanguageToggle } from "@/components/language-toggle";
+import { supabaseBrowser } from "@/lib/supabase/browser";
 
-export function SiteHeader({ dark = false }: { dark?: boolean }) {
-  const [locale, setLocale] = useState<"en" | "ru">("en");
-
+export function SiteHeader() {
+  const [signedIn, setSignedIn] = useState(false);
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
-    const saved = window.localStorage.getItem("museum-locale");
-    if (saved === "ru" || saved === "en") setLocale(saved);
-    const onLocaleChange = (event: Event) => setLocale((event as CustomEvent<"en" | "ru">).detail);
-    window.addEventListener("museum-locale-change", onLocaleChange);
-    return () => window.removeEventListener("museum-locale-change", onLocaleChange);
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return;
+    let mounted = true;
+    void supabaseBrowser.auth.getUser().then(({ data }) => { if (mounted) setSignedIn(Boolean(data.user)); }).catch(() => {});
+    const { data } = supabaseBrowser.auth.onAuthStateChange((_event, session) => { if (mounted) setSignedIn(Boolean(session)); });
+    return () => { mounted = false; data.subscription.unsubscribe(); };
   }, []);
-
-  const copy = locale === "ru"
-    ? { create: "Создать", explore: "Смотреть", login: "Войти" }
-    : { create: "Create", explore: "Explore", login: "Log in" };
-
-  return <header className={`relative z-20 flex items-center justify-between px-5 py-5 md:px-10 md:py-7 ${dark ? "text-paper" : "text-ink"}`}>
-    <Link href="/" className="display text-[25px] leading-none">Museum <span className="italic">of</span> Me</Link>
-    <nav className="hidden items-center gap-8 text-xs uppercase tracking-[.18em] md:flex">
-      <Link href="/create" className="opacity-70 transition-opacity hover:opacity-100">{copy.create}</Link>
-      <Link href="/museum/mila" className="opacity-70 transition-opacity hover:opacity-100">{copy.explore}</Link>
-    </nav>
-    <div className="flex items-center gap-3 md:gap-5">
-      <LanguageToggle dark={dark} />
-      <Link href="/auth" className="text-xs uppercase tracking-[.16em] underline decoration-1 underline-offset-4">{copy.login}</Link>
-    </div>
+  async function signOut() {
+    setBusy(true);
+    try { const { error } = await supabaseBrowser.auth.signOut(); if (!error) window.location.assign("/"); } finally { setBusy(false); }
+  }
+  return <header className="site-header">
+    <Link href="/" aria-label="Museum of Me home" className="brand"><span className="brand-mark" aria-hidden="true">✳</span><span>Museum <i>of</i> Me</span></Link>
+    <nav aria-label="Main navigation" className="header-nav"><Link href="/#how-it-works" className="py-3">The idea</Link><Link href="/demo" className="py-3">A sample museum</Link><Link href="/create" className="py-3">Create</Link>{signedIn && <button disabled={busy} onClick={signOut} className="py-3">{busy ? "Leaving…" : "Sign out"}</button>}</nav>
+    <div className="header-actions"><LanguageToggle /><Link href={signedIn ? "/dashboard" : "/auth"} className="header-account">{signedIn ? "My museum" : "Log in"}</Link></div>
   </header>;
 }

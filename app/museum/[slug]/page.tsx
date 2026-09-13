@@ -1,5 +1,20 @@
-import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
-import { exhibits, museum } from "@/lib/mock-data";
+﻿import Link from "next/link";
+import type { Metadata } from "next";
+import { PageShell } from "@/components/page-shell";
+import { MemoryUniverse } from "@/components/memory-universe";
+import { MuseumReveal } from "@/components/museum-reveal";
+import { getPublicMuseum as getMuseumState } from "@/lib/public-museum";
+export const dynamic = "force-dynamic";
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+ const { slug } = await params; const museum = await getMuseumState(slug);
+ if (!museum.exists) return { title: "Museum not found — Museum of Me" };
+ const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+ return { title: `${museum.name} — Museum of Me`, description: "How my friends see me.", openGraph: { title: `${museum.name} — Museum of Me`, description: "How my friends see me.", images: [`${base}/api/museums/${slug}/poster?format=og`] } };
+}
+export default async function MuseumPage({ params }: { params: Promise<{ slug: string }> }) {
+ const { slug } = await params; const museum = await getMuseumState(slug);
+ if (!museum.exists) return <PageShell><section className="mx-auto max-w-xl px-5 py-24 text-center"><span className="text-5xl gold-text" aria-hidden="true">✧</span><p className="eyebrow mb-6 mt-8">Museum not found</p><h1 className="display text-6xl leading-[.95]">This little world<br /><em className="gold-text">isn’t here.</em></h1><Link href="/create" className="primary-link mt-10">Create a museum ↗</Link></section></PageShell>;
+ if (!museum.unlocked) return <PageShell><section className="gallery-hero"><span className="eyebrow">A private collection</span><h1 className="display !text-5xl md:!text-7xl">The museum<br /><em className="gold-text">is still forming.</em></h1><p>The doors will open when enough memories have been collected. Some things are worth the wait.</p><MemoryUniverse name={museum.name} hidden interactive={false} /></section></PageShell>;
+ return <MuseumReveal name={museum.name} slug={museum.slug} exhibits={museum.exhibits} analyticsId={museum.analyticsId} />;
+}
 
-export default async function MuseumPage({ params }: { params: Promise<{ slug: string }> }) { await params; return <main className="grain min-h-screen bg-[#e9e7df]"><SiteHeader /><section className="mx-auto max-w-7xl px-5 pb-20 pt-12 md:px-10 md:pt-20"><div className="flex flex-col justify-between gap-10 md:flex-row md:items-end"><div><p className="mb-6 text-[10px] uppercase tracking-[.25em] text-muted">A living collection / 2024</p><h1 className="display text-7xl leading-[.78] md:text-[10rem]">{museum.name}</h1></div><div className="max-w-xs text-sm leading-relaxed text-ink/60">{museum.description}<br /><span className="mt-4 inline-block text-[10px] uppercase tracking-[.18em]">Collected by {museum.collected} people</span></div></div><div className="mt-20 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{exhibits.map((exhibit, i) => <article key={exhibit.id} className={`group min-h-[320px] p-6 transition-transform hover:-translate-y-1 md:min-h-[370px] ${i === 0 ? "lg:col-span-2" : ""}`} style={{ backgroundColor: exhibit.color }}><div className="flex h-full flex-col justify-between"><div className="flex justify-between text-[10px] uppercase tracking-[.18em] text-ink/50"><span>Exhibit 0{i + 1}</span><span>2024</span></div><div><div className="mb-5 text-6xl">{exhibit.symbol}</div><h2 className="display text-4xl leading-none">{exhibit.title}</h2><p className="mt-3 max-w-xs text-sm leading-relaxed text-ink/60">“{exhibit.note}”</p><p className="mt-5 text-[10px] uppercase tracking-[.18em] text-ink/50">— {exhibit.from}</p></div></div></article>)}</div><div className="mt-16 flex flex-col justify-between gap-5 border-t border-ink/15 pt-5 text-[10px] uppercase tracking-[.18em] text-muted md:flex-row"><span>This museum was made with care</span><Link href={`/museum/${museum.slug}/share`} className="text-ink underline underline-offset-4">Make one for someone ↗</Link></div></section></main>; }

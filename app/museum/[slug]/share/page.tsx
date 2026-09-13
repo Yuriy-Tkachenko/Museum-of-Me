@@ -1,5 +1,20 @@
-import Link from "next/link";
-import { museum } from "@/lib/mock-data";
-import { SiteHeader } from "@/components/site-header";
+import type { Metadata } from "next";
+import { MuseumShare } from "@/components/museum-share";
+import { getPublicMuseum } from "@/lib/public-museum";
 
-export default async function SharePage({ params }: { params: Promise<{ slug: string }> }) { await params; const url = "museumofme.com/m/" + museum.token; return <main className="min-h-screen bg-ink text-paper"><SiteHeader dark /><section className="mx-auto flex max-w-3xl flex-col items-center px-5 pb-20 pt-20 text-center md:pt-32"><p className="mb-8 text-[10px] uppercase tracking-[.28em] text-paper/45">Invite a memory</p><h1 className="display text-7xl leading-[.82] md:text-[9rem]">Every story<br /><span className="italic text-accent">belongs here.</span></h1><p className="mt-10 max-w-sm text-sm leading-relaxed text-paper/55">Send this link to someone who knows you. They can add one small thing to your museum.</p><div className="mt-12 flex w-full max-w-md items-center justify-between rounded-full border border-paper/20 px-5 py-4 text-left"><span className="truncate text-xs text-paper/60">{url}</span><button className="ml-4 shrink-0 text-xs uppercase tracking-[.15em] text-accent">Copy</button></div><Link href={`/museum/${museum.slug}`} className="mt-8 text-xs uppercase tracking-[.15em] underline underline-offset-4">View museum ↗</Link></section></main>; }
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const museum = await getPublicMuseum(slug);
+  if (!museum.exists) return { title: "Museum not found — Museum of Me" };
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  return { title: `${museum.name} — Museum of Me`, description: "A museum made by the people who know you best.", openGraph: { title: `${museum.name} — Museum of Me`, description: "A museum made by the people who know you best.", images: [`${base}/api/museums/${slug}/poster?format=og`] } };
+}
+
+export default async function SharePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const museum = await getPublicMuseum(slug);
+  if (!museum.exists) return <div className="min-h-screen bg-ink p-10 text-paper">Museum not found</div>;
+  return <MuseumShare slug={museum.slug} name={museum.name} unlocked={museum.unlocked} analyticsId={museum.analyticsId} />;
+}

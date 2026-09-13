@@ -1,0 +1,8 @@
+tests/
+test-results/
+playwright-report/
+playwright.config.ts
+scripts/
+.env.e2e
+.next/
+.next-build/

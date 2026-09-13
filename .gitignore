@@ -1,4 +1,9 @@
 node_modules
 .next
+.next-build
 .env*
 !.env.example
+playwright-report/
+test-results/
+supabase/.temp/
+supabase/.branches/
