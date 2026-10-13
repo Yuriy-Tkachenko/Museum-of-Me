@@ -1,6 +1,6 @@
-﻿# Museum of Me
+# Museum of Me
 
-A small museum made by the people who know you best. An owner creates a collection, friends add hidden memories without signing up, and the gallery opens automatically when its threshold is reached. Open galleries have downloadable PNG posters. No AI features.
+A small museum made by the people who know you best. An owner creates a collection, friends add hidden memories without signing up, and the gallery opens automatically when its threshold is reached. Open galleries have downloadable PNG posters. Optional portrait background removal runs on the visitor's device.
 
 ## Local development
 
@@ -23,7 +23,17 @@ npm start
 
 `npm start` now runs the production build. `npm run start:prod` is an equivalent alias. Public ENV values are embedded at build time: rebuild after changing them.
 
-## Environment variables
+## Administrator panel
+
+Run `node scripts/prepare-admin.mjs` once with your Supabase keys in `.env.local`. It creates the private `museum-admin-analytics` bucket, generates a separate administrator login, stores only a salted scrypt password hash and session secret in server ENV, and saves the generated login/password to ignored `.local-admin-account.txt`. Rebuild and restart, then open `/admin/login`. Do not publish the credentials file. Set `ADMIN_LOGIN`, `ADMIN_PASSWORD_HASH`, and `ADMIN_SESSION_SECRET` as sensitive server variables when deploying; changing the hash or session secret invalidates existing administrator sessions. No additional SQL is required.
+
+The Russian panel shows all Supabase Auth accounts, profile usernames and museum links. User passwords cannot be retrieved; the panel never collects them. Administrator sessions are independent of museum accounts, last eight hours, and use signed HttpOnly cookies. Login requests are limited through the database. Data is checked server-side on every page load. `node scripts/check-admin.mjs` verifies the complete flow against the local server using disposable, isolated accounts and cleans its own records and events.
+
+Museums with at least one response and fully opened museums come from current database records. Verified post-submission CTA clicks and parent/child museum relationships are stored as private JSON events from setup onward. Repeated clicks are deduplicated per browser and originating museum; the overall participant count deduplicates browsers across museums. Attribution uses the latest signed first-party referral within 30 days, in the same browser, and works through Google login. Gallery CTA referrals are also attributed. Deleted museums are excluded from current metrics. The average offspring count is attributed child museums divided by all current museums. Past clicks cannot be recovered; network failures can undercount events. Keep the analytics bucket private and include it in operational backups and removal procedures.
+
+## Environment variables reference
+
+Owners sign in only through Google OAuth and then confirm a six-digit TOTP code. On first sign-in the app shows a QR code to enroll Google Authenticator; later sessions require the current authenticator code. Supabase TOTP MFA must remain enabled.
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
@@ -35,8 +45,7 @@ npm start
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | For submissions | Cloudflare widget site key. |
 | `TURNSTILE_SECRET_KEY` | For submissions | Server-only Cloudflare secret. |
 | `PEXELS_API_KEY` | Optional | Server-only Pexels key. Without it, image search is disabled; uploads/text still work. |
-| `NEXT_PUBLIC_SUPABASE_GOOGLE_ENABLED` | Optional | `true` only after configuring Google OAuth in Supabase; default `false`. |
-| `NEXT_PUBLIC_ANALYTICS_PROVIDER` | Optional | Set `plausible` to enable analytics. Empty disables all analytics requests and attribution storage. |
+| `NEXT_PUBLIC_ANALYTICS_PROVIDER` | Optional | Set `plausible` to enable analytics. Empty disables external Plausible requests; administrator referral statistics are independent. |
 | `NEXT_PUBLIC_ANALYTICS_DOMAIN` | With analytics | The site identifier configured in Plausible. |
 | `NEXT_PUBLIC_ANALYTICS_ENDPOINT` | Optional | Defaults to `https://plausible.io/api/event`; supports a trusted self-hosted HTTPS endpoint. CSP permits its origin. |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | Before public launch | Contact shown on `/privacy` for account/museum removal requests. |
@@ -56,6 +65,9 @@ Create a Supabase project. Apply these migrations **in order** through SQL Edito
 1. `202609110001_initial_museum_schema.sql` — profiles, museums, invitations and exhibits.
 2. `202609130001_security_pass.sql` — RLS, private Storage, atomic writes and shared rate limits. Weak old invite tokens rotate; owners get new links in their dashboard.
 3. `202609130002_public_mvp.sql` — anonymous collection identifiers for funnels, exact unlock result, Vercel-compatible upload limit.
+4. `202610060001_museum_portraits.sql` — optional personal portraits, private `portraits` bucket and atomic portrait association when creating a museum.
+
+Museum creation includes an optional portrait upload and a live carousel preview. JPEG, PNG and WebP originals up to 12 MiB are prepared in the browser and re-encoded on the server (up to 2,400 pixels). The owner can view the portrait while collecting; public galleries receive signed portrait URLs only after opening. Apply migration 4 before deploying this version. Keep the `portraits` bucket private. Account removal must also delete the portrait object named by each museum's `portrait_path`.
 
 For an existing database apply only the unapplied migrations. Never re-run the initial schema over existing tables. For CLI deployment:
 
@@ -65,17 +77,7 @@ npx supabase link --project-ref YOUR_PROJECT_REF
 npx supabase db push
 ```
 
-Configure Auth → URL Configuration with the production Site URL and explicit redirect URLs such as `https://your-domain/auth/callback`. Add `http://localhost:3000/auth/callback` for local development. Enable email sign-in, configure a production SMTP sender, and verify real email delivery before inviting users. Supabase's default email sender is intended for limited testing, not general public onboarding.
-
-In **Magic Link** and **Confirm Signup** email templates include both `{{ .ConfirmationURL }}` and `{{ .Token }}`. Example:
-
-```html
-<h2>Your Museum of Me sign-in</h2>
-<p>Your code: <strong>{{ .Token }}</strong></p>
-<p><a href="{{ .ConfirmationURL }}">Open your museum</a></p>
-```
-
-A magic link must be opened in the browser where sign-in began (PKCE); the email code can be entered there instead. Google is optional; configure provider credentials and its Supabase callback before enabling the UI.
+Configure Auth → URL Configuration with the production Site URL and explicit redirect URLs such as `https://your-domain/auth/callback`. Add `http://localhost:3000/auth/callback` for local development. Configure Google as the only public sign-in provider, add its Client ID and Client Secret in Supabase, and add the Supabase callback URL to the Google OAuth client. Keep TOTP enrollment and verification enabled in Supabase Auth. No SMTP service is needed for this sign-in flow.
 
 The `exhibits` bucket is created by migrations and must remain private. Do not add public upload/read policies. New uploads are decoded and re-encoded on the server; signed URLs are issued only after reveal. See [SECURITY.md](SECURITY.md) for access rules, rate limits and migration notes for existing files. For removal requests, a trusted operator removes Storage objects and exhibit rows first, then the museum/account; never expose Service Role operations to visitors.
 
@@ -98,7 +100,7 @@ The browser accepts originals up to 12 MiB and resizes them to WebP. The server 
 
 Create a Turnstile widget and allow your exact production hostname (and `localhost` if using it for development). Set both keys. Every submission verifies success, hostname and `action=submit_exhibit` through Cloudflare Siteverify. Failed or expired challenges are retried with a fresh token; missing keys never disable server verification.
 
-Cloudflare's [dummy keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/) may return fixed hostname/action values. Use a real widget configured for localhost for manual end-to-end checks. Automated tests isolate the external boundary without adding any bypass flag or test route to the application. Never configure test keys in Vercel production.
+For localhost testing, set `LOCAL_TURNSTILE_TEST_MODE=true`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA`, and `TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA`, then rebuild and restart. These are Cloudflare's [official dummy keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/). The server still calls Siteverify and requires a confirmed dummy response. This mode accepts only the exact key pair and dummy token with an HTTP localhost origin; it rejects public domains. Use a real widget for public deployment and set the test mode to false. Never configure test keys in Vercel production. Automated smoke tests also isolate the external boundary with fixtures.
 
 ## Product analytics
 
@@ -123,6 +125,7 @@ The last two are **collection cohorts across different people**, not visitor-ses
 npm run lint
 npm run typecheck
 npm test
+npm run test:ui
 npm run test:security:db
 npm run build
 npm audit
@@ -140,7 +143,7 @@ npm run test:e2e
 
 On Windows the test runner uses an installed Microsoft Edge automatically; `PLAYWRIGHT_CHANNEL` can override the browser. The runner reads only local Supabase CLI status, builds the app with test ENV and starts a dedicated production server on port 3100. Never point the smoke suite at production.
 
-The smoke scenario verifies real owner email authentication, museum creation, three separate guest browser sessions, image upload into private Storage, hidden exhibits, automatic dashboard refresh, reveal, all poster formats, PNG download, gallery sharing and the analytics payloads. External Turnstile/Pexels and the analytics receiver are fixtures; Supabase Auth, RLS, RPCs and Storage are real. An admin-generated local email code makes email transport deterministic; test actual SMTP and the real Turnstile widget separately before launch. Each test deletes only its own data.
+The smoke scenario covers museum creation, three separate guest browser sessions, image upload into private Storage, hidden exhibits, automatic dashboard refresh, reveal, all poster formats, PNG download, gallery sharing and analytics payloads. External Google OAuth, Turnstile, Pexels and the analytics receiver require test fixtures or separate manual verification; Supabase Auth, RLS, RPCs and Storage remain real. Each test deletes only its own data.
 
 Screenshots and failure traces are saved under `test-results/`; open the report with `npx playwright show-report`. Browser runs overwrite the local `.next-build` with test settings: rebuild with your normal ENV before using `npm start`. Production deployment always builds afresh. No test fixtures are imported by production source.
 
@@ -148,9 +151,9 @@ Screenshots and failure traces are saved under `test-results/`; open the report 
 
 1. Import the repository into Vercel and choose the Next.js framework. `vercel.json` uses `npm ci` and `npm run build`; keep the default Next.js output handling, including the configured build directory.
 2. Select Node.js 22 or 24. Set production ENV from the table above. Keep server keys marked sensitive. Leave analytics empty if no provider account is ready.
-3. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS origin. Configure the same origin in Supabase Auth redirects and its hostname in Turnstile. Set a real support contact and SMTP sender.
+3. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS origin. Configure the same origin in Supabase Auth and Google OAuth redirects and its hostname in Turnstile. Set a real support contact.
 4. Apply all pending Supabase migrations **before** deploying this version. Never make the Storage bucket public to troubleshoot uploads.
 5. Deploy. Changes to `NEXT_PUBLIC_*` require a rebuild/redeploy. Give previews their own Supabase project and matching URL/widget configuration rather than sharing production data.
-6. On the deployed URL, create a museum in an owner browser, contribute from separate friend browsers, verify the locked state, reach the threshold, open the gallery and download/share a poster. Check email delivery, actual Turnstile, private file access, and your analytics goals.
+6. On the deployed URL, sign in through Google, enroll and verify Google Authenticator, create a museum, contribute from separate friend browsers, verify the locked state, reach the threshold, open the gallery and download/share a poster. Check repeat MFA sign-in, actual Turnstile, private file access, and your analytics goals.
 
 This repository contains deployment configuration and reproducible tests. Publication still requires access to your Vercel account and production Supabase/Turnstile credentials; running local smoke tests does not publish a site.

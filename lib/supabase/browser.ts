@@ -10,6 +10,6 @@ if (!url || !anonKey) {
 }
 
 export const supabaseBrowser = createBrowserClient<Database, "public">(
-  url ?? "https://demo.supabase.co",
-  anonKey ?? "demo-anon-key",
+  url || "https://demo.supabase.co",
+  anonKey || "demo-anon-key",
 ) as unknown as SupabaseClient;

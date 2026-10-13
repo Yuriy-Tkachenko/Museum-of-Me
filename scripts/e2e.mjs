@@ -15,6 +15,7 @@ const env = { ...process.env, NEXT_PUBLIC_SITE_URL: 'http://localhost:3100', NEX
   NEXT_PUBLIC_SUPABASE_GOOGLE_ENABLED: 'false', E2E_MAILPIT_URL: local.MAILPIT_URL || local.INBUCKET_URL,
 };
 if (!env.PLAYWRIGHT_CHANNEL && process.platform === 'win32' && existsSync('C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe')) env.PLAYWRIGHT_CHANNEL = 'msedge';
+if (!env.PLAYWRIGHT_CHANNEL && process.platform === 'win32' && existsSync('C:/Program Files/Google/Chrome/Application/chrome.exe')) env.PLAYWRIGHT_CHANNEL = 'chrome';
 async function run(args) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, args, { env, stdio: 'inherit', windowsHide: true });

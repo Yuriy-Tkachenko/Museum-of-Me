@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { MuseumShare } from "@/components/museum-share";
 import { getPublicMuseum } from "@/lib/public-museum";
 
@@ -15,6 +16,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function SharePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const museum = await getPublicMuseum(slug);
-  if (!museum.exists) return <div className="min-h-screen bg-ink p-10 text-paper">Museum not found</div>;
+  if (!museum.exists) notFound();
   return <MuseumShare slug={museum.slug} name={museum.name} unlocked={museum.unlocked} analyticsId={museum.analyticsId} />;
 }

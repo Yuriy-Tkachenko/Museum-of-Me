@@ -4,12 +4,12 @@ import { useState, type CSSProperties } from "react";
 
 export type Memory = { id: string; title: string; caption: string; imageUrl: string | null; symbol?: string };
 export const sampleMemories: Memory[] = [
-  { id: "coffee", title: "One more coffee", caption: "You always order another cup so we can stay a little longer.", imageUrl: "/images/coffee.jpg" },
-  { id: "flowers", title: "Just-because flowers", caption: "You never needed an occasion to make someone's day.", imageUrl: "/images/flowers.jpg" },
-  { id: "camera", title: "The little moments", caption: "Somehow, you're always the one who remembers to take a photo.", imageUrl: "/images/camera.jpg" },
-  { id: "sea", title: "Chasing the last light", caption: "That evening we missed the bus and stayed to watch the sea.", imageUrl: "/images/sea.jpg" },
-  { id: "vinyl", title: "One last song", caption: "No one leaves the kitchen until your playlist is finished.", imageUrl: "/images/vinyl.jpg" },
-  { id: "book", title: "A well-loved story", caption: "Every book you lend me has a little piece of you between its pages.", imageUrl: "/images/book.jpg" },
+  { id: "coffee", title: "One more coffee", caption: "You always order another cup so we can stay a little longer.", imageUrl: "/images/coffee-hq.webp" },
+  { id: "flowers", title: "Just-because flowers", caption: "You never needed an occasion to make someone's day.", imageUrl: "/images/flowers-hq.webp" },
+  { id: "camera", title: "The little moments", caption: "Somehow, you're always the one who remembers to take a photo.", imageUrl: "/images/camera-hq.webp" },
+  { id: "sea", title: "Chasing the last light", caption: "That evening we missed the bus and stayed to watch the sea.", imageUrl: "/images/sea-hq.webp" },
+  { id: "vinyl", title: "One last song", caption: "No one leaves the kitchen until your playlist is finished.", imageUrl: "/images/vinyl-hq.webp" },
+  { id: "book", title: "A well-loved story", caption: "Every book you lend me has a little piece of you between its pages.", imageUrl: "/images/book-hq.webp" },
 ];
 export function MemoryUniverse({ memories = sampleMemories, name = "Mila", portrait = false, compact = false, interactive = true, hidden = false }: { memories?: Memory[]; name?: string; portrait?: boolean; compact?: boolean; interactive?: boolean; hidden?: boolean }) {
   const [selected, setSelected] = useState<number | null>(null);

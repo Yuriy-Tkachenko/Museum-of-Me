@@ -30,6 +30,7 @@ export type Database = {
           slug: string;
           title: string;
           theme: string;
+          portrait_path: string | null;
           required_exhibits: number;
           collected_exhibits: number;
           analytics_id: string;
@@ -43,6 +44,7 @@ export type Database = {
           slug: string;
           title: string;
           theme?: string;
+          portrait_path?: string | null;
           required_exhibits?: number;
           collected_exhibits?: number;
           analytics_id?: string;

@@ -3,6 +3,10 @@ test-results/
 playwright-report/
 playwright.config.ts
 scripts/
+supabase/
+*.md
 .env.e2e
+.local-admin-account.txt
+.local-test-account.txt
 .next/
 .next-build/

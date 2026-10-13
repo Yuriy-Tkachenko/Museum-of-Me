@@ -151,7 +151,7 @@ const translations: Record<string, string> = {
 };
 
 const reverseTranslations = Object.fromEntries(Object.entries(translations).map(([en, ru]) => [ru, en]));
-const originalText = new WeakMap<Text, string>();
+const originalText = new WeakMap<Text, { source: string; rendered: string }>();
 
 function translateValue(source: string, locale: "en" | "ru") {
   const dictionary = locale === "ru" ? translations : reverseTranslations;
@@ -186,13 +186,18 @@ function translatePage(locale: "en" | "ru") {
   let node: Node | null;
   while ((node = walker.nextNode())) nodes.push(node as Text);
   nodes.forEach((textNode) => {
-    if (textNode.parentElement?.closest('script, style, textarea, [translate="no"]')) return;
+    if (textNode.parentElement?.closest('script, style, textarea, [translate="no"], [data-locale-ready="false"]')) return;
     const current = textNode.nodeValue ?? "";
-    const value = originalText.get(textNode) ?? reverseTranslations[current.trim()] ?? current;
-    originalText.set(textNode, value);
-    textNode.nodeValue = translateValue(value, locale);
+    const previous = originalText.get(textNode);
+    // React can reuse a text node for loading, success and error messages.
+    // Preserve its source only while it still contains our last translation.
+    const source = previous && current === previous.rendered ? previous.source : current;
+    const rendered = translateValue(source, locale);
+    originalText.set(textNode, { source, rendered });
+    if (current !== rendered) textNode.nodeValue = rendered;
   });
   document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea").forEach((field) => {
+    if (field.closest('[data-locale-ready="false"]')) return;
     const source = field.dataset.museumPlaceholder ?? field.placeholder;
     field.dataset.museumPlaceholder = source;
     field.placeholder = translateValue(source, locale);
@@ -209,7 +214,7 @@ export function LocaleRuntime() {
     const onChange = (event: Event) => apply((event as CustomEvent<"en" | "ru">).detail);
     window.addEventListener("museum-locale-change", onChange);
     const observer = new MutationObserver(() => { if (currentLocale === "ru") translatePage("ru"); });
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["data-locale-ready"] });
     return () => { window.removeEventListener("museum-locale-change", onChange); observer.disconnect(); };
   }, []);
   return null;

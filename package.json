@@ -14,12 +14,16 @@
     "test:security:db": "node tests/security-db.mjs",
     "test": "node --test tests/*.test.cjs",
     "test:e2e": "node scripts/e2e.mjs",
+    "test:ui": "node scripts/check-local-ui.mjs",
+    "supabase:check": "node scripts/check-supabase.mjs",
+    "supabase:prepare": "node scripts/prepare-supabase.mjs",
     "db:start": "supabase start -x realtime,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor",
     "db:stop": "supabase stop",
     "db:status": "supabase status",
     "check": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^1.1.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
     "class-variance-authority": "^0.7.1",
@@ -31,7 +35,6 @@
     "server-only": "^0.0.1",
     "sharp": "^0.35.4",
     "tailwind-merge": "^3.0.2",
-    "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.2"
   },
   "devDependencies": {

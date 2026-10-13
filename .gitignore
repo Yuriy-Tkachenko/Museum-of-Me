@@ -1,8 +1,11 @@
 node_modules
 .next
 .next-build
+*.tsbuildinfo
 .env*
 !.env.example
+.local-test-account.txt
+.local-admin-account.txt
 playwright-report/
 test-results/
 supabase/.temp/

@@ -51,6 +51,10 @@ try {
     insert into public.invite_links(museum_id,token) select id,'mila-7x3p' from public.museums where slug='legacy';`);
   sql(readFileSync('supabase/migrations/202609130001_security_pass.sql', 'utf8'));
   sql(readFileSync('supabase/migrations/202609130002_public_mvp.sql', 'utf8'));
+  sql(readFileSync('supabase/migrations/202610060001_museum_portraits.sql', 'utf8'));
+  sql(readFileSync('supabase/migrations/202610080001_explicit_api_grants.sql', 'utf8'));
+  assert.equal(sql("select public from storage.buckets where id='portraits'"), 'f');
+  assert.equal(sql("select has_function_privilege('authenticated','public.create_museum_secure(uuid,text,text,text,integer,text)','EXECUTE')"), 'f');
   assert.equal(sql("select bool_and(token ~ '^[a-f0-9]{64}$') from public.invite_links"), 't');
   assert.equal(sql("select public from storage.buckets where id='exhibits'"), 'f');
   assert.equal(sql("select has_table_privilege('authenticated','public.museums','INSERT') or has_table_privilege('authenticated','public.museums','UPDATE') or has_table_privilege('anon','public.exhibits','INSERT')"), 'f');
@@ -69,6 +73,9 @@ try {
   assert.equal(asUser(owner, "select collected_exhibits from public.museums where slug='alice'"), '1');
   sql("insert into storage.objects values(gen_random_uuid(),'exhibits')");
   assert.equal(asUser(owner, 'select count(*) from storage.objects'), '0');
+  sql("insert into storage.objects values(gen_random_uuid(),'portraits')");
+  assert.equal(asUser(owner, "select count(*) from storage.objects where bucket_id='portraits'"), '0');
+  assert.throws(() => sql(`update public.museums set portrait_path='portraits/${stranger}/${randomUUID()}/portrait.webp' where slug='alice'`));
   const beforeLong = sql("select count(*) from public.exhibits");
   assert.throws(() => sql(submit('c'.repeat(64), randomUUID(), 'x'.repeat(121))));
   assert.equal(sql("select count(*) from public.exhibits"), beforeLong);

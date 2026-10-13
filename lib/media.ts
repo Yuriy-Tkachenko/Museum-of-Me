@@ -10,7 +10,7 @@ export function isPexelsImage(value: string) {
   } catch { return false; }
 }
 
-export async function normalizeUpload(file: File) {
+export async function normalizeUpload(file: File, { maxEdge = 1600, quality = 82 } = {}) {
   if (file.size > 4 * 1024 * 1024) throw new HttpError(413, "Image must be smaller than 4 MB.");
   const types: Record<string, string> = { "image/jpeg": "jpeg", "image/png": "png", "image/webp": "webp" };
   if (!types[file.type]) throw new HttpError(415, "Use a JPEG, PNG, or WebP image.");
@@ -20,8 +20,17 @@ export async function normalizeUpload(file: File) {
     const image = sharp(input, { limitInputPixels: 25_000_000, failOn: "warning" });
     const metadata = await image.metadata();
     if (metadata.format !== types[file.type] || (metadata.pages ?? 1) > 1) throw new Error("Invalid image");
-    return await image.rotate().resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
+    const normalized = await image.rotate().resize({ width: maxEdge, height: maxEdge, fit: "inside", withoutEnlargement: true }).webp({ quality }).toBuffer();
+    if (normalized.length > 4 * 1024 * 1024) throw new Error("Normalized image is too large");
+    return normalized;
   } catch { throw new HttpError(415, "This image could not be safely processed."); }
+}
+
+// Call only for the authenticated owner, or after the gallery has opened.
+export async function portraitImageUrl(value: string | null | undefined, ownerId: string) {
+  if (!value || !/^[a-f0-9-]{36}$/.test(ownerId) || !new RegExp(`^portraits/${ownerId}/[a-f0-9-]{36}/portrait\\.webp$`).test(value)) return null;
+  const { data, error } = await createSupabaseAdminClient().storage.from("portraits").createSignedUrl(value, 3600);
+  return error ? null : data.signedUrl;
 }
 
 // Call only AFTER checking the museum is unlocked. Never render arbitrary stored URLs.

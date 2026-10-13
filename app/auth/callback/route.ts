@@ -11,6 +11,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) return NextResponse.redirect(new URL("/auth?error=callback", url.origin));
     const newSignup = data.user && Math.abs(Date.parse(data.user.last_sign_in_at ?? "") - Date.parse(data.user.created_at)) < 60000;
-    return NextResponse.redirect(new URL(newSignup ? "/create?welcome=1" : destination, url.origin));
+    const afterMfa = newSignup ? "/create?welcome=1" : destination;
+    return NextResponse.redirect(new URL(`/auth/mfa?next=${encodeURIComponent(afterMfa)}`, url.origin));
   } catch { return NextResponse.redirect(new URL("/auth?error=callback", url.origin)); }
 }

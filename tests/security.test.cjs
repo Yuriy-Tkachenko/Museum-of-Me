@@ -8,15 +8,16 @@ const ts = require('typescript');
 const sharp = require('sharp');
 
 // Compile the real server modules in isolation, mocking only external boundaries.
-function harness({ rpc = async () => ({ data: 0, error: null }), fetchImpl = global.fetch, from, user = null } = {}) {
+function harness({ rpc = async () => ({ data: 0, error: null }), fetchImpl = global.fetch, from, storage, user = null, mfaLevel = 'aal2' } = {}) {
   const jar = new Map();
   const cache = new Map();
   const env = { NODE_ENV: 'production', SECURITY_SECRET: 's'.repeat(64), NEXT_PUBLIC_SITE_URL: 'https://museum.test', TURNSTILE_SECRET_KEY: 'test-secret' };
   function load(name) {
     if (name === 'server-only') return {};
+    if (name === '@/lib/admin-analytics') return { recordMuseumBirth: async () => {} };
     if (name === 'next/headers') return { cookies: async () => ({ get: (key) => jar.get(key), set: (key, value, options) => jar.set(key, { value, options }) }) };
-    if (name === '@/lib/supabase/server') return { createSupabaseServerClient: async () => ({ auth: { getUser: async () => ({ data: { user } }) } }) };
-    if (name === '@/lib/supabase/admin') return { createSupabaseAdminClient: () => ({ rpc, from }) };
+    if (name === '@/lib/supabase/server') return { createSupabaseServerClient: async () => ({ auth: { getUser: async () => ({ data: { user } }), mfa: { getAuthenticatorAssuranceLevel: async () => ({ data: { currentLevel: mfaLevel }, error: null }) } } }) };
+    if (name === '@/lib/supabase/admin') return { createSupabaseAdminClient: () => ({ rpc, from, storage }) };
     if (!name.startsWith('@/')) return require(name);
     const file = path.resolve(name.slice(2) + '.ts');
     if (cache.has(file)) return cache.get(file).exports;
@@ -100,6 +101,32 @@ test('Turnstile requires success, exact hostname and action; no secret means no 
   await assert.rejects(s.verifyTurnstile('valid'), { status: 503 });
 });
 
+test('official Turnstile test keys require explicit localhost configuration and a verified dummy response', async () => {
+  let result = { success: true, hostname: 'example.com', metadata: { result_with_testing_key: true } };
+  let calls = 0;
+  const h = harness({ fetchImpl: async () => { calls++; return Response.json(result); } });
+  Object.assign(h.env, { LOCAL_TURNSTILE_TEST_MODE: 'true', NEXT_PUBLIC_SITE_URL: 'http://localhost:3000',
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: '1x00000000000000000000AA', TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA' });
+  const { verifyTurnstile } = h.load('@/lib/security');
+  await verifyTurnstile('XXXX.DUMMY.TOKEN.XXXX');
+  assert.equal(calls, 1, 'local tests still verify with Cloudflare');
+  await assert.rejects(verifyTurnstile('forged-token'), { status: 400 });
+  for (const bad of [{ success: false, metadata: { result_with_testing_key: true } }, { success: true }]) {
+    result = bad; await assert.rejects(verifyTurnstile('XXXX.DUMMY.TOKEN.XXXX'), { status: 400 });
+  }
+  result = { success: true, metadata: { result_with_testing_key: true } };
+  for (const site of ['https://museum.test', 'http://museum.test', 'http://localhost.evil.test', 'https://localhost:3000']) {
+    h.env.NEXT_PUBLIC_SITE_URL = site;
+    await assert.rejects(verifyTurnstile('XXXX.DUMMY.TOKEN.XXXX'), { status: 503 });
+  }
+  h.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000';
+  h.env.LOCAL_TURNSTILE_TEST_MODE = 'false';
+  await assert.rejects(verifyTurnstile('XXXX.DUMMY.TOKEN.XXXX'), { status: 503 });
+  h.env.LOCAL_TURNSTILE_TEST_MODE = 'true';
+  h.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = 'real-key';
+  await assert.rejects(verifyTurnstile('XXXX.DUMMY.TOKEN.XXXX'), { status: 503 });
+});
+
 test('uploads reject spoofed MIME, SVG, corrupt data and oversize files; real images become WebP', async () => {
   const media = harness().load('@/lib/media');
   const png = await sharp({ create: { width: 10, height: 10, channels: 3, background: 'red' } }).png().toBuffer();
@@ -118,22 +145,73 @@ test('image URL allowlist blocks SSRF, XSS URLs, credentials and deceptive hosts
 });
 
 test('long museum fields fail and SQL-shaped usernames are rejected', () => {
-  const { createMuseumSchema } = harness().load('@/lib/validation');
+  const { createMuseumSchema, updateMuseumDetailsSchema } = harness().load('@/lib/validation');
   const valid = { name: 'Alice', username: 'alice', title: 'Museum', requiredExhibits: 5 };
   for (const change of [{ name: 'a'.repeat(81) }, { title: 'x'.repeat(101) }, { username: "alice'; drop table museums;--" }, { requiredExhibits: 101 }]) assert.equal(createMuseumSchema.safeParse({ ...valid, ...change }).success, false);
+  assert.equal(updateMuseumDetailsSchema.safeParse({ name: 'Alice', username: 'alice', title: 'Museum' }).success, true);
+  assert.equal(updateMuseumDetailsSchema.safeParse({ name: 'Alice', username: 'alice', title: 'Museum', owner_id: 'victim' }).success, false);
+});
+
+test('museum settings require MFA and update only the signed-in owner through the atomic RPC', async () => {
+  const request = body => new Request('https://museum.test/api/museums/settings', { method: 'PATCH', headers: { origin: 'https://museum.test', 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const valid = { name: 'Alice Smith', username: 'alice_new', title: 'Alice Museum' };
+  assert.equal((await harness().load('@/app/api/museums/settings/route').PATCH(request(valid))).status, 401);
+  assert.equal((await harness({ user: { id: 'owner' }, mfaLevel: 'aal1' }).load('@/app/api/museums/settings/route').PATCH(request(valid))).status, 403);
+
+  let update;
+  const builder = { select: () => builder, eq: () => builder, order: () => builder, limit: () => builder, maybeSingle: async () => ({ data: { id: 'museum-id', portrait_path: null }, error: null }) };
+  const h = harness({ user: { id: 'owner' }, from: () => builder, rpc: async (name, args) => {
+    if (name === 'consume_rate_limit') return { data: 0, error: null };
+    if (name === 'update_museum_details_secure') { update = args; return { data: { slug: args.p_username }, error: null }; }
+    return { data: 0, error: null };
+  } });
+  const response = await h.load('@/app/api/museums/settings/route').PATCH(request(valid));
+  assert.equal(response.status, 200);
+  assert.equal(update.p_owner, 'owner'); assert.equal(update.p_museum, 'museum-id');
+  assert.equal(update.p_username, 'alice_new'); assert.equal(update.p_name, 'Alice Smith');
+  assert.equal(update.p_portrait, null);
+  assert.equal((await h.load('@/app/api/museums/settings/route').PATCH(request({ ...valid, owner_id: 'victim' }))).status, 400);
+});
+
+test('museum settings safely replace and remove the owner portrait', async () => {
+  const owner = '10000000-0000-4000-8000-000000000001';
+  const oldPath = `portraits/${owner}/20000000-0000-4000-8000-000000000002/portrait.webp`;
+  const uploads = []; const removed = []; const updates = [];
+  const builder = { select: () => builder, eq: () => builder, order: () => builder, limit: () => builder, maybeSingle: async () => ({ data: { id: 'museum-id', portrait_path: oldPath }, error: null }) };
+  const storage = { from: bucket => ({
+    upload: async (path, bytes, options) => { uploads.push({ bucket, path, bytes, options }); return { error: null }; },
+    remove: async paths => { removed.push(...paths); return { error: null }; },
+  }) };
+  const h = harness({ user: { id: owner }, from: () => builder, storage, rpc: async (name, args) => {
+    if (name === 'consume_rate_limit') return { data: 0, error: null };
+    if (name === 'update_museum_details_secure') { updates.push(args); return { data: { slug: args.p_username }, error: null }; }
+    return { data: 0, error: null };
+  } });
+  const route = h.load('@/app/api/museums/settings/route').PATCH;
+  const fields = form => { form.set('name', 'Alice'); form.set('username', 'alice'); form.set('title', 'Alice Museum'); return form; };
+  const send = form => route(new Request('https://museum.test/api/museums/settings', { method: 'PATCH', headers: { origin: 'https://museum.test' }, body: form }));
+  const image = await sharp({ create: { width: 120, height: 90, channels: 3, background: '#dccab0' } }).png().toBuffer();
+  const replacement = fields(new FormData()); replacement.set('portrait', new File([image], 'portrait.png', { type: 'image/png' }));
+  assert.equal((await send(replacement)).status, 200);
+  assert.equal(uploads.length, 1); assert.match(updates[0].p_portrait, new RegExp(`^portraits/${owner}/[a-f0-9-]{36}/portrait\\.webp$`));
+  assert.equal(removed[0], oldPath);
+  const removal = fields(new FormData()); removal.set('portraitAction', 'remove');
+  assert.equal((await send(removal)).status, 200); assert.equal(updates[1].p_portrait, null);
 });
 
 test('locked public museum never queries exhibits or returns any exhibit data', async () => {
   const queried = [];
+  const owner = '10000000-0000-4000-8000-000000000001';
   const h = harness({ from: (table) => {
     queried.push(table);
     if (table === 'exhibits') throw new Error('Exhibit access before reveal!');
-    const builder = { select: () => builder, eq: () => builder, maybeSingle: async () => ({ data: table === 'museums' ? { id: 'id', slug: 'alice', title: 'Alice', owner_id: 'owner', status: 'collecting' } : { display_name: 'Alice' } }) };
+    const builder = { select: () => builder, eq: () => builder, maybeSingle: async () => ({ data: table === 'museums' ? { id: 'id', slug: 'alice', title: 'Alice', owner_id: owner, status: 'collecting', portrait_path: `portraits/${owner}/20000000-0000-4000-8000-000000000002/portrait.webp` } : { display_name: 'Alice' } }) };
     return builder;
   } });
   h.env.NEXT_PUBLIC_SUPABASE_URL = 'https://project.supabase.co'; h.env.SUPABASE_SERVICE_ROLE_KEY = 'test';
   const result = await h.load('@/lib/public-museum').getPublicMuseum('alice');
   assert.equal(result.exists, true); assert.equal(result.unlocked, false); assert.equal(result.exhibits.length, 0); assert.equal(queried.includes('exhibits'), false);
+  assert.equal(result.portraitUrl, undefined, 'closed galleries never expose portrait URLs');
 });
 
 function inviteBackend() {
@@ -180,6 +258,7 @@ test('exhibit route passes text as RPC parameters, exposes no counts and rejects
 test('museum route requires authentication and ignores a forged owner in JSON', async () => {
   const request = () => new Request('https://museum.test/api/museums', { method: 'POST', headers: { origin: 'https://museum.test', 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Alice', username: 'alice', title: 'Museum', requiredExhibits: 5, owner_id: 'victim' }) });
   assert.equal((await harness().load('@/app/api/museums/route').POST(request())).status, 401);
+  assert.equal((await harness({ user: { id: 'aal1-user' }, mfaLevel: 'aal1' }).load('@/app/api/museums/route').POST(request())).status, 403);
   let owner;
   const h = harness({ user: { id: 'verified-user' }, rpc: async (name, args) => {
     if (name === 'create_museum_secure') { owner = args.p_owner; return { data: { slug: 'alice' } }; }
@@ -195,4 +274,60 @@ test('Pexels route is gated by signed visitor identity before any external searc
   const { GET } = h.load('@/app/api/pexels/search/route');
   assert.equal((await GET(new Request('https://museum.test/api/pexels/search?q=coffee'))).status, 403);
   assert.equal(fetched, false);
+});
+
+test('museum portrait uploads are normalized, private, owned by the authenticated user and committed with creation', async () => {
+  const owner = '10000000-0000-4000-8000-000000000001';
+  const uploads = []; const removed = []; const calls = [];
+  let rpcError = null;
+  const h = harness({ user: { id: owner }, storage: { from: bucket => ({
+    upload: async (path, bytes, options) => { uploads.push({ bucket, path, bytes, options }); return { error: null }; },
+    remove: async paths => { removed.push(...paths); return { error: null }; },
+  }) }, rpc: async (name, args) => { calls.push({ name, args }); return name === 'create_museum_secure' ? { data: { slug: 'anna', analyticsId: 'id' }, error: rpcError } : { data: 0, error: null }; } });
+  const route = h.load('@/app/api/museums/route').POST;
+  const portrait = await sharp({ create: { width: 80, height: 100, channels: 3, background: '#dccab0' } }).png().toBuffer();
+  const form = () => { const f = new FormData(); f.set('name', 'Анна'); f.set('username', 'anna'); f.set('title', 'Музей Анны'); f.set('requiredExhibits', '3'); return f; };
+  const send = f => route(new Request('https://museum.test/api/museums', { method: 'POST', headers: { origin: 'https://museum.test' }, body: f }));
+  const f = form(); f.set('portrait', new File([portrait], 'me.png', { type: 'image/png' }));
+  assert.equal((await send(f)).status, 201);
+  assert.equal(uploads[0].bucket, 'portraits');
+  assert.match(uploads[0].path, new RegExp(`^portraits/${owner}/[a-f0-9-]{36}/portrait\\.webp$`));
+  assert.equal((await sharp(uploads[0].bytes).metadata()).format, 'webp');
+  assert.equal(calls.find(c => c.name === 'create_museum_secure').args.p_portrait, uploads[0].path);
+  assert.equal(removed.length, 0);
+  const bad = form(); bad.set('portrait', new File(['<svg></svg>'], 'fake.png', { type: 'image/png' }));
+  assert.equal((await send(bad)).status, 415); assert.equal(uploads.length, 1);
+  const duplicate = form(); duplicate.append('name', 'Someone else');
+  assert.equal((await send(duplicate)).status, 400);
+  const forged = form(); forged.set('portrait', `portraits/${owner}/forged/portrait.webp`);
+  assert.equal((await send(forged)).status, 400);
+  rpcError = { code: '23505' };
+  assert.equal((await send(f)).status, 409); assert.equal(removed.length, 1);
+  rpcError = { message: 'Network failure' };
+  assert.equal((await send(f)).status, 503); assert.equal(removed.length, 1, 'ambiguous commits retain private uploads');
+});
+
+test('portrait URL signing rejects external URLs and another owner’s storage paths', async () => {
+  const owner = '10000000-0000-4000-8000-000000000001';
+  const path = `portraits/${owner}/20000000-0000-4000-8000-000000000002/portrait.webp`;
+  const signed = [];
+  const h = harness({ storage: { from: bucket => ({ createSignedUrl: async (value, expiry) => {
+    signed.push({ bucket, value, expiry }); return { data: { signedUrl: 'https://signed.example/portrait' }, error: null };
+  } }) } });
+  const { portraitImageUrl } = h.load('@/lib/media');
+  for (const value of [null, 'https://evil.test/me.jpg', path.replace(owner, '30000000-0000-4000-8000-000000000003'), path.replace('portrait.webp', '../portrait.webp')]) assert.equal(await portraitImageUrl(value, owner), null);
+  assert.equal(signed.length, 0);
+  assert.equal(await portraitImageUrl(path, owner), 'https://signed.example/portrait');
+  assert.equal(signed[0].bucket, 'portraits'); assert.equal(signed[0].expiry, 3600);
+});
+
+test('portrait normalization preserves cutout transparency', async () => {
+  const input = await sharp({ create: { width: 80, height: 100, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: await sharp({ create: { width: 40, height: 80, channels: 4, background: '#a4492e' } }).png().toBuffer(), left: 20, top: 10 }])
+    .png().toBuffer();
+  const { normalizeUpload } = harness().load('@/lib/media');
+  const normalized = await normalizeUpload(new File([input], 'portrait.png', { type: 'image/png' }), { maxEdge: 2400 });
+  const { data, info } = await sharp(normalized).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  assert.equal(data[3], 0, 'transparent background remains transparent');
+  assert.equal(data[(50 * info.width + 40) * 4 + 3], 255, 'person remains opaque');
 });

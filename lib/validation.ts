@@ -7,4 +7,11 @@ export const createMuseumSchema = z.object({
   requiredExhibits: z.coerce.number().int().min(1, "At least 1 exhibit is required").max(100, "Maximum is 100 exhibits").default(5),
 });
 
+export const updateMuseumDetailsSchema = createMuseumSchema.pick({
+  name: true,
+  username: true,
+  title: true,
+}).strict();
+
 export type CreateMuseumInput = z.infer<typeof createMuseumSchema>;
+export type UpdateMuseumDetailsInput = z.infer<typeof updateMuseumDetailsSchema>;

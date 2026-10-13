@@ -8,11 +8,11 @@ export async function middleware(request: NextRequest) {
   const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin : "";
   const analyticsOrigin = process.env.NEXT_PUBLIC_ANALYTICS_PROVIDER === "plausible" && analyticsEndpoint() ? new URL(analyticsEndpoint()!).origin : "";
   const csp = [
-    "default-src 'self'", `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com${production ? "" : " 'unsafe-eval'"}`,
+    "default-src 'self'", `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval' https://challenges.cloudflare.com${production ? "" : " 'unsafe-eval'"}`,
     "style-src 'self' 'unsafe-inline'", `img-src 'self' blob: data: https://images.pexels.com ${supabaseOrigin}`,
     `connect-src 'self' https://challenges.cloudflare.com ${supabaseOrigin} ${analyticsOrigin}${production ? "" : " ws: wss:"}`,
     "frame-src https://challenges.cloudflare.com", "font-src 'self' data:", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'",
-    ...(production ? ["upgrade-insecure-requests"] : []),
+    ...(production && process.env.NEXT_PUBLIC_SITE_URL?.startsWith("https://") ? ["upgrade-insecure-requests"] : []),
   ].join("; ");
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
@@ -25,7 +25,8 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: requestHeaders } });
   const pathname = request.nextUrl.pathname;
   const protectedPath = pathname === "/create" || pathname.startsWith("/create/") || pathname === "/dashboard" || pathname.startsWith("/dashboard/");
-  if (!protectedPath && pathname !== "/auth") return finish(response);
+  const mfaPath = pathname === "/auth/mfa";
+  if (!protectedPath && pathname !== "/auth" && !mfaPath) return finish(response);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) {
@@ -45,8 +46,19 @@ export async function middleware(request: NextRequest) {
   });
   const { data: { user } } = await supabase.auth.getUser();
   if (protectedPath && !user) return finish(NextResponse.redirect(new URL("/auth", request.url)));
-  if (pathname === "/auth" && user) return finish(NextResponse.redirect(new URL("/dashboard", request.url)));
+  if (mfaPath && !user) return finish(NextResponse.redirect(new URL("/auth", request.url)));
+  if (user) {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const currentLevel = aal?.currentLevel;
+    if (protectedPath && currentLevel !== "aal2") {
+      const next = `${pathname}${request.nextUrl.search}`;
+      return finish(NextResponse.redirect(new URL(`/auth/mfa?next=${encodeURIComponent(next)}`, request.url)));
+    }
+    if (pathname === "/auth") return finish(NextResponse.redirect(new URL(currentLevel === "aal2" ? "/dashboard" : "/auth/mfa", request.url)));
+  }
   return finish(response);
 }
 
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };
+// Static assets are deployment artifacts. Keep them out of the
+// request-specific CSP path so Vercel's CDN and the browser can cache them.
+export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|images/|fonts/|models/).*)"] };

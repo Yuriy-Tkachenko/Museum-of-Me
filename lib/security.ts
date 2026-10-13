@@ -100,12 +100,24 @@ export async function verifyTurnstile(token: string) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) throw new HttpError(503, "Verification is not configured.");
   if (!token || token.length > 2048) throw new HttpError(400, "Complete the verification first.");
+  const testSecret = secret === "1x0000000000000000000000000000000AA";
+  const origin = new URL(appOrigin());
+  const localTest = process.env.LOCAL_TURNSTILE_TEST_MODE === "true" && origin.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname)
+    && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY === "1x00000000000000000000AA" && testSecret;
+  if (testSecret && !localTest) throw new HttpError(503, "Test verification is only available on localhost.");
+  if (localTest && token !== "XXXX.DUMMY.TOKEN.XXXX") throw new HttpError(400, "Complete the verification first.");
   const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ secret, response: token }), signal: AbortSignal.timeout(8000), cache: "no-store",
   });
   if (!response.ok) throw new HttpError(503, "Verification is temporarily unavailable.");
   const result = await response.json();
+  // Official dummy responses do not carry the real widget's hostname/action.
+  // Still call Siteverify and require its explicit testing-key confirmation.
+  if (localTest) {
+    if (result.success !== true || result.metadata?.result_with_testing_key !== true) throw new HttpError(400, "Verification expired or failed. Please try again.");
+    return;
+  }
   if (result.success !== true || result.action !== "submit_exhibit" || result.hostname !== new URL(appOrigin()).hostname) {
     throw new HttpError(400, "Verification expired or failed. Please try again.");
   }
