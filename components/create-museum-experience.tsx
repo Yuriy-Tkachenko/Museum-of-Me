@@ -2,14 +2,15 @@
 import { useCallback, useState } from "react";
 import { CreateMuseumForm } from "@/components/create-museum-form";
 import { HeroMemoryOrbit } from "@/components/hero-memory-orbit";
+import { InteriorIntro } from "@/components/scrapbook-ui";
 
 export function CreateMuseumExperience() {
   const [preview, setPreview] = useState<{ name: string; portrait: string | null }>({ name: "", portrait: null });
   const updatePreview = useCallback((name: string, portrait: string | null) => { setPreview({ name, portrait }); }, []);
-  return <div className="grid items-start gap-9 md:grid-cols-2 md:gap-16">
-    <div className="creation-story"><p className="eyebrow mb-6">01 / A space with your name on it</p><h1 className="display interior-heading">Every little thing.<br /><em className="gold-text">Entirely you.</em></h1><p className="mt-6 max-w-sm text-sm leading-relaxed text-muted">Make room for the way your people see you. A few details, and your collection begins.</p>
-      <div className="creation-live-preview"><p className="eyebrow">Your museum preview</p><HeroMemoryOrbit compact interactive={false} name={preview.name} portraitUrl={preview.portrait} /><p className="creation-preview-note">This is a preview. Your friends will add the real memories.</p></div>
+  return <div className="scrapbook-workspace create-workspace">
+    <div className="creation-story"><InteriorIntro eyebrow="01 / A space with your name on it" title={<>Every little thing.<br /><em>Entirely you.</em></>} description="Make room for the way your people see you. A few details, and your collection begins." />
+      <div className="creation-live-preview"><p className="interior-kicker">Your museum preview</p><HeroMemoryOrbit compact interactive={false} name={preview.name} portraitUrl={preview.portrait} /><p className="creation-preview-note">A first look only — your friends will fill it with the real stories.</p></div>
     </div>
-    <div className="form-panel"><p className="eyebrow mb-7">Create your museum</p><CreateMuseumForm onPreviewChange={updatePreview} /></div>
+    <section className="form-panel paper-form" aria-labelledby="create-form-title"><span className="paper-clip" aria-hidden="true" /><p className="interior-kicker">Just the essentials</p><h2 id="create-form-title" className="paper-form-title">Create your museum</h2><CreateMuseumForm onPreviewChange={updatePreview} /></section>
   </div>;
 }
