@@ -1,5 +1,10 @@
-﻿"use client";
-import { MuseumReveal } from "@/components/museum-reveal";
-import { sampleMemories } from "@/components/memory-universe";
-export default function DemoPage() { return <MuseumReveal demo name="Mila" slug="demo" exhibits={sampleMemories.map((memory) => ({ ...memory, symbol: "✦", color: "#59452e" }))} />; }
+import type { Metadata } from "next";
+import { DemoMuseum } from "@/components/demo-museum";
 
+export const metadata: Metadata = {
+  title: "Museum of Yuri",
+  description: "Загляните в готовый Museum of Me — личный музей, собранный из ассоциаций и историй друзей.",
+  alternates: { canonical: "/demo" },
+};
+
+export default function DemoPage() { return <DemoMuseum />; }

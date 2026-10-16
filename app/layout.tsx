@@ -9,6 +9,7 @@ import "@fontsource/caveat/700.css";
 import "./globals.css";
 import "./scrapbook.css";
 import "./reference-landing.css";
+import "./demo-museum.css";
 import { LocaleRuntime } from "@/components/locale-runtime";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";

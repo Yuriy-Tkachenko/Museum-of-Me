@@ -7,7 +7,7 @@ const channel = process.env.PLAYWRIGHT_CHANNEL || (existsSync('C:/Program Files/
 const browser = await chromium.launch({ channel, headless: true });
 const errors = [];
 try {
-  for (const width of [390, 1440]) {
+  for (const width of [320, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 1000 } });
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
@@ -59,6 +59,12 @@ try {
       await page.locator('.editorial-home').waitFor();
       assert.equal(await page.locator('.editorial-home').count(), 1, route);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, route);
+      if (route === '/demo') {
+        assert.equal(await page.locator('.demo-museum-hero .museum-owner img[src*="photo-owner"]').count(), 1);
+        assert.equal(await page.locator('.demo-exhibit-card').count(), 5);
+        assert.equal(await page.locator('.hero-orbit-wrap').count(), 0);
+        assert.equal(await page.getByText(/A sample museum|Пример музея/i).count(), 0);
+      }
     }
     await context.close();
   }

@@ -3,17 +3,10 @@
 import Image from "next/image";
 import { useId, useRef, useState } from "react";
 import { SketchIcon } from "@/components/sketch-icon";
+import { referenceExhibits } from "@/lib/reference-exhibits";
 
-const exhibits = [
-  { id: "coffee", title: "Чёрный кофе", alt: "Чашка чёрного кофе на блюдце", width:194, height:173, story: "Кофе, с которого начинаются все наши разговоры." },
-  { id: "cat", title: "Твой кот ♡", alt: "Полосатый кот с большими глазами", width:160, height:164, story: "Тот самый взгляд, который невозможно не сфотографировать." },
-  { id: "petersburg", title: "Петербург ночью", alt: "Огни ночного города отражаются в канале", width:203, height:175, story: "Город, который особенно похож на тебя после заката." },
-  { id: "laptop", title: "Ноутбук с 40 вкладками", alt: "Открытый ноутбук на столе в тёплом свете лампы", width:186, height:150, story: "Потому что закрыть вкладку — значит потерять идею." },
-  { id: "vinyl", title: "Это трек", alt: "Чёрная виниловая пластинка с жёлтой этикеткой", width:109, height:107, story: "Та самая песня, которую мы каждый раз включаем ещё раз." },
-];
-
-export function ReferenceMuseumCollage() {
-  const [selected, setSelected] = useState<(typeof exhibits)[number] | null>(null);
+export function ReferenceMuseumCollage({ detailCta = true }: { detailCta?: boolean }) {
+  const [selected, setSelected] = useState<(typeof referenceExhibits)[number] | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const id = useId();
   return <section className="reference-collage" aria-labelledby={`${id}-title`}>
@@ -24,7 +17,7 @@ export function ReferenceMuseumCollage() {
       <Image src="/images/reference/photo-owner.webp" width={270} height={285} alt="Юрий: кудрявый парень в солнечных очках на фоне заката" priority unoptimized />
       <figcaption translate="no"><SketchIcon kind="crown" /><span>Museum<br />of Yuri</span></figcaption>
     </figure>
-    {exhibits.map(exhibit => <figure key={exhibit.id} className={`museum-exhibit museum-exhibit-${exhibit.id}`}>
+    {referenceExhibits.map(exhibit => <figure key={exhibit.id} className={`museum-exhibit museum-exhibit-${exhibit.id}`}>
       <button type="button" className="museum-photo-button" aria-labelledby={`${id}-${exhibit.id}`} aria-haspopup="dialog"
         onClick={() => { setSelected(exhibit); dialog.current?.showModal(); }}>
         <Image src={`/images/reference/photo-${exhibit.id}.webp`} width={exhibit.width} height={exhibit.height} alt={exhibit.alt} unoptimized />
@@ -43,7 +36,7 @@ export function ReferenceMuseumCollage() {
       <p className="reference-dialog-eyebrow">Глазами друзей</p>
       <h2 id={`${id}-detail-title`} translate="no">{selected?.title}</h2>
       <p translate="no">{selected?.story}</p>
-      <a href="/demo">Посмотреть пример музея →</a>
+      {detailCta && <a href="/demo">Заглянуть в музей →</a>}
     </dialog>
   </section>;
 }

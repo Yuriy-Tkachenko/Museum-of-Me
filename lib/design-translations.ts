@@ -1,5 +1,5 @@
 ﻿export const designTranslations: Record<string, string> = {
- "The idea": "Идея", "How it works": "Как это работает", "A sample museum": "Пример музея", "My museum": "Мой музей", "Sign out": "Выйти",
+ "The idea": "Идея", "How it works": "Как это работает", "A sample museum": "Пример музея", "Look inside": "Заглянуть внутрь", "My museum": "Мой музей", "Sign out": "Выйти",
  "friends' perspective": "взгляд друзей", "How do your friends see you?": "Как тебя видят твои друзья?",
  "Send a link to your friends. Collect the little things they associate with you. Open your own museum.": "Отправь ссылку друзьям. Собери их ассоциации. Открой свой музей.",
  "See an example": "Посмотреть пример", "One person. Five different points of view.": "Один человек. Пять разных взглядов.",
@@ -119,5 +119,15 @@
  "We could not remove the background from this photo. Your original is ready to use.": "Не удалось убрать фон. Можно использовать исходное фото.",
  "Use your test account email and password.": "Введите почту и пароль тестового аккаунта.",
  "Sign in with your test account email and password.": "Войдите с почтой и паролем тестового аккаунта.",
+ "through friends' eyes": "глазами друзей",
+ "Not a biography. Not a profile. Just the small things friends remember: a city at night, black coffee, forty open tabs and one very important cat.": "Не биография и не профиль. Просто мелочи, которые помнят друзья: ночной город, чёрный кофе, сорок открытых вкладок и один очень важный кот.",
+ "one person — five points of view ♡": "один человек — пять взглядов ♡",
+ "Collected by friends": "Собрано друзьями",
+ "Everything ordinary": "Всё обычное",
+ "becomes an exhibit.": "становится экспонатом.",
+ "your turn": "теперь твоя очередь",
+ "What would your": "Что выбрали бы",
+ "friends choose?": "твои друзья?",
+ "Create a museum, send one link and let the people who know you fill in the rest.": "Создай музей, отправь одну ссылку — и пусть близкие наполнят его всем остальным.",
 };
 
