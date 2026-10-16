@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { supabaseBrowser } from "@/lib/supabase/browser";
 
 export function AdminLogout() {
   const [busy, setBusy] = useState(false);
@@ -9,6 +10,7 @@ export function AdminLogout() {
     try {
       const response = await fetch("/api/admin/logout", { method: "POST" });
       if (!response.ok) throw new Error();
+      await supabaseBrowser.auth.signOut();
       window.location.assign("/admin/login");
     } catch { setBusy(false); setError("Не удалось выйти. Повторите попытку."); }
   }

@@ -32,7 +32,7 @@ if (missing.length) {
       console.log(`OK: private ${bucket} storage`);
     }
     console.log('Supabase connection checks passed. Restart the app after changing .env.local.');
-    console.log('Google OAuth requires an allowed /auth/callback redirect; keep TOTP MFA enabled in Supabase Auth.');
+    console.log('Google OAuth requires an allowed /auth/callback redirect. Owner accounts do not require Supabase TOTP MFA.');
   } catch (error) {
     // Never print response bodies, keys or user records.
     console.error(error instanceof Error ? error.message : 'Supabase check failed.');

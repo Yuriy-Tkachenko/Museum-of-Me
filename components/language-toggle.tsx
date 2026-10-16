@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 type Locale = "en" | "ru";
 
 export function LanguageToggle() {
-  const [locale, setLocale] = useState<Locale>("en");
+  const [locale, setLocale] = useState<Locale>("ru");
 
   useEffect(() => {
     let saved: string | null = null;

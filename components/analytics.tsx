@@ -2,10 +2,13 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { track, rememberSource, creationSource, type AnalyticsEvent, type AnalyticsProps } from "@/lib/analytics";
+import { track, trackOperational, rememberSource, creationSource, type AnalyticsEvent, type AnalyticsProps } from "@/lib/analytics";
 
 export function TrackEvent({ event, museum, onceKey = "session" }: { event: AnalyticsEvent; museum?: string; onceKey?: string }) {
-  useEffect(() => { track(event, { museum, ...(event === "create_started" || event === "signup_completed" ? { source: creationSource() } : {}) }, onceKey); }, [event, museum, onceKey]);
+  useEffect(() => {
+    track(event, { museum, ...(event === "create_started" || event === "signup_completed" ? { source: creationSource() } : {}) }, onceKey);
+    if (event === "invite_opened" || event === "museum_viewed") trackOperational(event, { museum }, onceKey);
+  }, [event, museum, onceKey]);
   return null;
 }
 

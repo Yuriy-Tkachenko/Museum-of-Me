@@ -1,33 +1,33 @@
 import "server-only";
-import { createHmac, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
-import { promisify } from "node:util";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { HttpError } from "@/lib/security";
 
-const derive = promisify(scrypt);
 const cookieName = "museum-admin";
 const lifetime = 8 * 60 * 60;
+const defaultAdminEmail = "yuriy.tk4ko@gmail.com";
+
+export function adminEmail() {
+  return (process.env.ADMIN_EMAIL || defaultAdminEmail).trim().toLowerCase();
+}
+
+export function isAdminGoogleUser(user: { email?: string | null; app_metadata?: { provider?: string; providers?: string[] } } | null | undefined) {
+  const providers = user?.app_metadata?.providers ?? [];
+  return user?.email?.toLowerCase() === adminEmail() && (user.app_metadata?.provider === "google" || providers.includes("google"));
+}
 
 function configuration() {
-  const login = process.env.ADMIN_LOGIN;
-  const hash = process.env.ADMIN_PASSWORD_HASH;
   const secret = process.env.ADMIN_SESSION_SECRET;
-  if (!login || !hash || !/^[a-f0-9]{32}:[a-f0-9]{128}$/.test(hash) || !secret || secret.length < 32) {
+  const email = adminEmail();
+  if (!/^\S+@\S+\.\S+$/.test(email) || !secret || secret.length < 32) {
     throw new HttpError(503, "Доступ администратора ещё не настроен.");
   }
-  return { login, hash, secret };
+  return { email, secret };
 }
 
 function signature(value: string) {
-  const { login, hash, secret } = configuration();
-  return createHmac("sha256", secret).update(`admin:${login}:${hash}:${value}`).digest("hex");
-}
-
-export async function checkAdminPassword(login: string, password: string) {
-  const config = configuration();
-  const [salt, hash] = config.hash.split(":");
-  const candidate = await derive(password, salt, 64) as Buffer;
-  return timingSafeEqual(candidate, Buffer.from(hash, "hex")) && login === config.login;
+  const { email, secret } = configuration();
+  return createHmac("sha256", secret).update(`admin:${email}:${value}`).digest("hex");
 }
 
 export async function signInAdmin() {

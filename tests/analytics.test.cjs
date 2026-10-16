@@ -29,3 +29,14 @@ test('view events deduplicate across rerenders; completed shares remain countabl
   const a = analytics(); a.track('landing_view', {}, 'session'); a.track('landing_view', {}, 'session'); a.track('museum_shared', { method: 'copy' }); a.track('museum_shared', { method: 'download' });
   assert.equal(a.sent.length, 3); a.rememberSource('exhibit'); assert.equal(a.creationSource(), 'exhibit');
 });
+test('first-party funnel analytics works without Plausible and sends only safe fields', () => {
+  const museum = '00000000-0000-4000-8000-000000000000';
+  const a = analytics({ env: { NEXT_PUBLIC_ANALYTICS_PROVIDER: '' } });
+  a.trackOperational('invite_opened', { museum, method: 'evil', format: 'evil', email: 'private' }, 'invite');
+  a.trackOperational('invite_opened', { museum }, 'invite');
+  assert.equal(a.sent.length, 1);
+  assert.equal(a.sent[0].url, '/api/analytics/funnel');
+  assert.equal(a.sent[0].credentials, 'same-origin');
+  assert.deepEqual(JSON.parse(a.sent[0].body), { event: 'invite_opened', museum });
+  assert.equal(a.sent[0].body.includes('private'), false);
+});

@@ -16,15 +16,16 @@ try {
       await page.getByRole('button', { name: locale, exact: true }).click();
       await page.waitForFunction(value => document.documentElement.lang === value, locale);
       const russian = locale === 'ru';
-      assert.match(await page.locator('h1').innerText(), russian ? /частичек вас/ : /pieces of you/);
-      // Dynamic labels must follow React state, including after repeated language switches.
-      await page.getByRole('button', { name: 'Pause memory motion', exact: true }).click();
-      await page.waitForFunction(value => document.querySelector('.hero-orbit-toolbar button').textContent.includes(value), russian ? 'Продолжить' : 'Play motion');
-      await page.getByRole('button', { name: 'Read memory: One more coffee', exact: true }).click();
-      await page.getByRole('region', { name: 'Selected memory' }).waitFor();
-      await page.getByRole('button', { name: 'Close memory', exact: true }).click();
-      await page.getByRole('button', { name: 'Resume memory motion', exact: true }).click();
-      await page.waitForFunction(value => document.querySelector('.hero-orbit-toolbar button').textContent.includes(value), russian ? 'Остановить' : 'Pause motion');
+      assert.match(await page.locator('h1').innerText(), /Museum\s+of me/i);
+      assert.equal(await page.locator('.reference-collage figure').count(), 6);
+      assert.equal(await page.locator('.reference-collage figure img').count(), 6);
+      assert.equal(await page.locator('h1 img, h2 img, h3 img, figcaption img').count(), 0);
+      assert(await page.locator('.reference-collage figure img').evaluateAll(images => images.every(image => image.complete && image.naturalWidth > 0)));
+      await page.getByRole('button', { name: 'Чёрный кофе', exact: true }).click();
+      await page.getByRole('dialog').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('dialog h2').innerText(), 'Чёрный кофе');
+      await page.getByRole('button', { name: 'Закрыть экспонат', exact: true }).click();
+      await page.getByRole('dialog').waitFor({ state: 'hidden' });
       await page.locator('.hero-actions a').first().click();
       await page.waitForURL(/\/(create|auth)$/);
       if (new URL(page.url()).pathname === '/create') {
@@ -51,7 +52,7 @@ try {
       await page.reload({ waitUntil: 'networkidle' });
       await page.waitForFunction(value => document.documentElement.lang === value, locale);
       assert.equal(await page.locator('html').getAttribute('lang'), locale);
-      console.log(`PASS create CTA, form, dynamic labels, reload: ${locale}, ${width}px`);
+      console.log(`PASS semantic exhibits, create CTA, form, locale reload: ${locale}, ${width}px`);
     }
     for (const route of ['/demo', '/privacy', '/m/invalid', '/museum/missing', '/museum/missing/share', '/missing-page', '/dashboard']) {
       await page.goto(`${baseURL}${route}`, { waitUntil: 'networkidle' });
@@ -62,7 +63,7 @@ try {
     await context.close();
   }
   assert.deepEqual(errors, []);
-  console.log('PASS public routes and EN/RU browser checks; no runtime or hydration errors.');
+  console.log('PASS semantic landing, public routes and EN/RU browser checks; no runtime or hydration errors.');
 } finally {
   await browser.close();
 }

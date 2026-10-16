@@ -1,14 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { chromium, expect } from '@playwright/test';
-import { randomBytes } from 'node:crypto';
-import { readFileSync, mkdirSync } from 'node:fs';
+import { createHmac, randomBytes } from 'node:crypto';
+import { mkdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
 process.loadEnvFile('.env.local');
 if (process.env.NEXT_PUBLIC_SITE_URL !== 'http://localhost:3000') throw new Error('This check requires the local server.');
-const credentials = Object.fromEntries(readFileSync('.local-admin-account.txt', 'utf8').trim().split('\n').map(line => {
-  const i = line.indexOf(': '); return [line.slice(0, i), line.slice(i + 2)];
-}));
 const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 const bucket = 'museum-admin-analytics';
@@ -32,17 +29,13 @@ try {
   await context.addCookies([{ name: 'museum-admin', value: `${Date.now() + 600000}.${'a'.repeat(48)}.${'a'.repeat(64)}`, domain: 'localhost', path: '/' }]);
   await panel.goto('http://localhost:3000/admin');
   await expect(panel).toHaveURL(/\/admin\/login$/);
-  const crossSite = await panel.request.post('http://localhost:3000/api/admin/login', { headers: { origin: 'https://other.test' }, data: { login: credentials.Login, password: credentials.Password } });
+  const crossSite = await panel.request.post('http://localhost:3000/api/admin/login', { headers: { origin: 'https://other.test' }, data: { code: '000000' } });
   assert.equal(crossSite.status(), 403);
-  await panel.getByLabel('Логин администратора', { exact: true }).fill(credentials.Login);
-  await panel.getByLabel('Пароль', { exact: true }).fill('incorrect-password');
-  await panel.getByRole('button', { name: 'Войти в панель' }).click();
-  await expect(panel.locator('.admin-error[role="alert"]')).toHaveText('Неверный логин или пароль.');
-  await panel.getByLabel('Пароль', { exact: true }).fill(credentials.Password);
-  await panel.getByRole('button', { name: 'Войти в панель' }).click();
-  await expect(panel).toHaveURL(/\/admin$/);
-  assert.equal((await panel.content()).includes(process.env.ADMIN_PASSWORD_HASH), false);
-  console.log('PASS separate administrator login, incorrect password, forged session, CSRF and private storage.');
+  const expires = Date.now() + 600000, nonce = randomBytes(24).toString('hex'), value = `${expires}.${nonce}`;
+  const mac = createHmac('sha256', process.env.ADMIN_SESSION_SECRET).update(`admin:${process.env.ADMIN_EMAIL}:${value}`).digest('hex');
+  await context.addCookies([{ name: 'museum-admin', value: `${value}.${mac}`, domain: 'localhost', path: '/' }]);
+  await panel.goto('http://localhost:3000/admin'); await expect(panel).toHaveURL(/\/admin$/);
+  console.log('PASS signed administrator session, forged session, CSRF and private storage; Google OAuth is checked manually.');
 
   const owner = await account('admin-parent');
   const childOwner = await account('admin-child');
@@ -111,14 +104,17 @@ try {
     await panel.goto(`http://localhost:3000/admin?q=${suffix}`);
     const row = panel.locator('tbody tr').filter({ hasText: owner.email });
     await expect(row).toContainText(`parent_${suffix}`);
-    await expect(row).toContainText('Не отображается');
+    await expect(row).toContainText('1 / 1');
     await panel.screenshot({ path: `test-results/admin-users-${width}.png`, fullPage: true });
     await panel.goto('http://localhost:3000/admin?tab=analytics');
     const parentRow = panel.locator('tbody tr').filter({ hasText: `parent_${suffix}` });
-    await expect(parentRow.locator('td').nth(2)).toHaveText('1 / 1');
+    await expect(parentRow.locator('td').nth(2)).toHaveText('1');
     await expect(parentRow.locator('td').nth(3)).toHaveText('1');
-    await expect(parentRow.locator('td').nth(4)).toHaveText('1');
-    await expect(parentRow.locator('td').nth(5)).toHaveText('Открыт');
+    await expect(parentRow.locator('td').nth(4)).toContainText('1');
+    await expect(parentRow.locator('td').nth(5)).toHaveText('100%');
+    await expect(parentRow.locator('td').nth(6)).toHaveText('1');
+    await expect(parentRow.locator('td').nth(7)).toHaveText('1');
+    await expect(parentRow.locator('td').nth(9)).toHaveText('Открыт');
     assert.equal(await panel.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await panel.screenshot({ path: `test-results/admin-analytics-${width}.png`, fullPage: true });
   }

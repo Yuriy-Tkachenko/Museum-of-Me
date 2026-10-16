@@ -1,0 +1,120 @@
+/* Semantic HTML composition. Only the photographs are raster assets. */
+.reference-home{--marker:"Permanent Marker",cursive;--hand:"Caveat",cursive;background:radial-gradient(ellipse at 72% 31%,#f5d5fc88,transparent 48%),#f8f5ef;color:#111;isolation:isolate}
+.reference-home::after{opacity:.04;pointer-events:none}
+.reference-home .site-header{max-width:1672px;min-height:65px;padding:9px 13px;margin:0 auto;width:94.4%;border-bottom:1px solid #24212466}
+.reference-home .brand{display:flex;gap:10px;flex:none;font:29px/1 var(--marker);letter-spacing:-.06em;text-transform:uppercase}
+.reference-home .brand svg{width:44px;height:44px;color:#f54bdc;transform:rotate(-7deg)}
+.reference-home .header-nav{margin-right:auto;margin-left:65px;gap:44px;font-size:16px}
+.reference-home .header-account{font-size:14px;min-width:126px;padding:8px 28px}
+.reference-home .editorial-hero{position:relative;display:grid;grid-template-columns:37% 63%;align-items:center;max-width:1800px;min-height:650px;margin:0 auto;padding:15px 2% 27px 4.7%;border-radius:0;overflow:visible;background:none}
+.reference-home .editorial-hero::before,.reference-home .editorial-hero::after{display:none}
+.reference-copy{position:relative;z-index:2;min-width:0;padding:14px 0}
+.reference-kicker{display:table;padding:4px 26px 7px;margin:0 0 16px;background:#e9c9f6;transform:rotate(-5deg);font:700 32px/1.1 var(--hand);clip-path:polygon(0 7%,98% 0,100% 88%,2% 100%)}
+.reference-home .reference-title{margin:0 0 15px -5px;font:400 clamp(70px,7.9vw,133px)/.91 var(--marker);letter-spacing:-.065em;text-transform:uppercase;transform:rotate(-3deg)}
+.reference-title span{display:block;white-space:nowrap}
+.reference-title span:last-child{padding-left:12px}
+.reference-smiley{position:absolute;right:5%;top:40%;width:86px;height:86px;border-radius:48% 52% 50% 47%;background:#dfff1b;transform:rotate(9deg)}
+.reference-smiley i,.reference-smiley i::after{position:absolute;top:23px;left:26px;width:7px;height:16px;border-radius:50%;background:#111;content:""}
+.reference-smiley i::after{top:0;left:26px}
+.reference-smiley b{position:absolute;top:32px;left:21px;width:44px;height:30px;border:5px solid #111;border-top:0;border-radius:0 0 50% 50%}
+.reference-question{position:relative;max-width:600px;margin:18px 0 16px;font:700 clamp(32px,3.4vw,55px)/1.06 var(--hand);letter-spacing:-.035em;transform:rotate(-2deg)}
+.reference-question::after{content:"";position:absolute;right:7%;bottom:-6px;width:20%;border-top:4px solid #fa42d7;transform:rotate(-4deg)}
+.reference-intro{max-width:540px;margin:0;color:#111;font-size:19px;line-height:1.4;letter-spacing:-.025em}
+.reference-home .hero-actions{justify-content:flex-start;gap:27px;margin-top:19px;flex-wrap:wrap}
+.reference-home .primary-link{min-width:290px;min-height:56px;justify-content:center;gap:14px;padding:13px 25px;font-size:17px;font-weight:650;background:linear-gradient(105deg,#ff36d8,#fa43df);box-shadow:none;white-space:nowrap}
+.reference-home .primary-link>span{font-size:26px;line-height:1}
+.reference-home .quiet-link{position:relative;min-height:36px;padding:7px 0;font-size:15px;white-space:nowrap;border:0}
+.reference-home .quiet-link::after{content:"";position:absolute;left:0;right:0;bottom:1px;border-top:3px solid #fa40d9;transform:rotate(-1.5deg)}
+.reference-friends{display:flex;align-items:center;gap:22px;margin-top:24px}
+.reference-friend-portraits{display:flex;flex:none}
+.reference-friend-portraits img{display:block;width:51px;height:51px;object-fit:cover;border:2px solid #f8f5ef;border-radius:50%;margin-left:-6px}
+.reference-friend-portraits img:first-child{margin-left:0}
+.reference-friends p{position:relative;max-width:280px;margin:0;font-size:14px;line-height:1.3;letter-spacing:-.04em}
+.reference-friends p::after{content:"";position:absolute;left:6px;bottom:-9px;width:75px;border-top:3px solid #ff45df;transform:rotate(-6deg)}
+
+/* Every positioned card is an independent figure with its own image and caption. */
+.reference-collage{position:relative;isolation:isolate;container-type:inline-size;width:100%;min-width:0;aspect-ratio:1.48;margin:0}
+.museum-paper{position:absolute;z-index:-2;inset:4% 2%;background:repeating-linear-gradient(22deg,#e9dfd644 0 1px,transparent 1px 4px),#ece3d9;clip-path:polygon(5% 8%,20% 0,36% 8%,54% 0,77% 7%,90% 3%,98% 20%,93% 43%,100% 66%,94% 91%,75% 99%,52% 94%,27% 100%,8% 89%,0 68%,5% 47%,0 24%);transform:rotate(-3deg)}
+.museum-paper-two{inset:9% 4% 6% 7%;background:#f2e7f2;transform:rotate(7deg);z-index:-1}
+.museum-owner,.museum-exhibit{position:absolute;margin:0;padding:10px 10px 15px;border-radius:7px;background:#fffdf9;box-shadow:0 10px 19px #3021252b}
+.museum-owner{z-index:5;left:32%;top:17%;width:33%;transform:rotate(2deg)}
+.museum-owner>img{display:block;width:100%;height:auto;aspect-ratio:.95;object-fit:cover;border-radius:3px}
+.museum-owner figcaption{display:flex;align-items:center;gap:9px;margin:0 -12px -4px;padding:12px 10px;background:#f2e4cd;transform:rotate(-3deg);font:400 clamp(18px,3.8cqw,40px)/.94 var(--marker);text-transform:uppercase;text-align:center}
+.museum-owner figcaption svg{width:22%;height:auto;color:#d54dec;flex-shrink:0}
+.museum-owner::before,.museum-exhibit::before{content:"";position:absolute;top:-13px;left:30%;width:35%;height:29px;background:#dec39bb5;transform:rotate(-12deg);z-index:2;pointer-events:none;clip-path:polygon(0 0,100% 5%,98% 100%,3% 95%)}
+.museum-exhibit{width:24%;z-index:3;--tilt:-8deg;transform:rotate(var(--tilt));transition:transform .2s,box-shadow .2s}
+.museum-exhibit:focus-within,.museum-exhibit:hover{z-index:15;transform:rotate(0deg) translateY(-5px);box-shadow:0 17px 28px #3021253b}
+.museum-photo-button{display:block;width:100%;padding:0;border:0;border-radius:4px;background:transparent;cursor:pointer}
+.museum-photo-button:focus-visible{outline:3px dashed #a7168e;outline-offset:5px}
+.museum-photo-button img{display:block;width:100%;height:auto;aspect-ratio:1.13;object-fit:cover;border-radius:3px}
+.museum-exhibit figcaption{position:relative;width:max-content;max-width:110%;margin:-2px auto -5px;padding:6px 10px 4px;background:#f0e4d0;color:#111;text-align:center;font:700 clamp(16px,2.8cqw,30px)/.95 var(--hand);box-shadow:0 3px 4px #54463415;pointer-events:none;clip-path:polygon(0 4%,98% 0,100% 94%,72% 100%,45% 95%,17% 100%,0 93%)}
+.museum-exhibit-coffee{left:7%;top:9%;--tilt:-9deg}
+.museum-exhibit-coffee figcaption{position:absolute;top:-18px;left:1%;margin:0;transform:rotate(-6deg)}
+.museum-exhibit-cat{left:64%;top:4%;width:24%;--tilt:11deg}
+.museum-exhibit-cat img{aspect-ratio:1.04}
+.museum-exhibit-petersburg{left:5%;top:51%;width:25%;--tilt:-12deg;z-index:6}
+.museum-exhibit-petersburg figcaption{max-width:80%}
+.museum-exhibit-laptop{left:66%;top:47%;width:25%;--tilt:9deg;z-index:7}
+.museum-exhibit-laptop figcaption{max-width:105%;font-size:clamp(16px,2.6cqw,28px)}
+.museum-exhibit-vinyl{left:82%;top:67%;width:18%;--tilt:5deg;z-index:4;padding:0;background:none;box-shadow:none}
+.museum-exhibit-vinyl::before{display:none}
+.museum-exhibit-vinyl .museum-photo-button{border:16px solid #151515;border-radius:50%;background:#151515;box-shadow:0 7px 14px #0003}
+.museum-exhibit-vinyl img{border-radius:50%;aspect-ratio:1}
+.museum-exhibit-vinyl figcaption{margin-top:-6px}
+.museum-more{position:absolute;right:0;top:27%;z-index:9;width:16%;padding:15px 8px;background:#debdec;transform:rotate(-10deg);box-shadow:0 7px 12px #3b263227;font:700 clamp(15px,2.5cqw,26px)/1.03 var(--hand);text-align:center}
+.museum-more svg{display:block;width:42%;margin:0 auto 10px}
+.museum-statement{position:absolute;left:36%;bottom:0;z-index:8;margin:0;padding:8px 25px 13px;background:#ff43d9;transform:rotate(-8deg);font:700 clamp(26px,4.5cqw,47px)/1 var(--hand);clip-path:polygon(1% 0,97% 2%,100% 94%,4% 100%,0 66%)}
+.museum-doodle{position:absolute;z-index:10;pointer-events:none;font-family:var(--hand);line-height:1}
+.museum-heart{left:60%;top:4%;font-size:9cqw;color:#c15cf1;transform:rotate(-12deg)}
+.museum-star{left:4%;top:44%;font-size:8cqw;color:#d4ff16;transform:rotate(-14deg)}
+.museum-squiggle{left:65%;bottom:7%;font-size:7cqw;color:#a322b5;transform:rotate(8deg)}
+.reference-exhibit-dialog{width:min(430px,calc(100% - 36px));max-height:90dvh;overflow:auto;padding:28px;border:1px solid #34202b30;border-radius:26px;background:#fff9ef;color:#171217;box-shadow:0 25px 100px #20121c44}
+.reference-exhibit-dialog::backdrop{background:#20121c66;backdrop-filter:blur(5px)}
+.reference-dialog-close{position:absolute;z-index:1;top:9px;right:12px;width:38px;height:38px;border-radius:50%;background:#efd9f4;color:#191019;font-size:28px}
+.museum-detail-image{display:block;width:100%;height:230px;object-fit:contain;background:#f3eadf;border-radius:14px}
+.reference-exhibit-dialog .reference-dialog-eyebrow{margin-top:20px;color:#9e1589;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.reference-exhibit-dialog h2{margin:10px 0;font:700 36px/1.05 var(--hand)}
+.reference-exhibit-dialog p{font-size:16px;line-height:1.5}
+.reference-exhibit-dialog a{display:inline-block;margin-top:20px;text-decoration:underline;text-decoration-color:#f43bd2;text-underline-offset:5px}
+.reference-steps{position:relative;max-width:1800px;margin:0 auto;padding:24px 3.5% 38px;background:#faf8f5}
+.reference-steps::before{content:"";position:absolute;top:-15px;left:0;right:0;height:22px;background:#faf8f5;clip-path:polygon(0 48%,4% 25%,8% 50%,12% 22%,16% 55%,20% 23%,24% 50%,28% 24%,32% 55%,36% 25%,40% 60%,44% 23%,48% 56%,52% 26%,56% 50%,60% 22%,64% 57%,68% 28%,72% 55%,76% 24%,80% 50%,84% 23%,88% 57%,92% 26%,96% 55%,100% 28%,100% 100%,0 100%)}
+.reference-steps>h2{position:relative;width:fit-content;max-width:100%;margin:0 auto 25px;font:700 48px/1.1 var(--hand);text-align:center}
+.reference-steps>h2::after{content:"";position:absolute;right:0;bottom:-8px;width:32%;border-top:4px solid #f544d7;transform:rotate(-3deg)}
+.reference-steps-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5%;list-style:none;margin:0;padding:0}
+.reference-step{display:grid;grid-template-columns:58px 70px minmax(0,1fr);gap:12px;align-items:start}
+.reference-step-number{display:grid;place-items:center;width:58px;height:58px;margin-top:4px;border-radius:48% 52% 47% 53%;background:#d078fd;transform:rotate(-8deg);font:700 35px/1 var(--hand);box-shadow:0 0 0 4px #d078fd20}
+.reference-step-1 .reference-step-number{background:#ff50df;box-shadow:0 0 0 4px #ff50df20;transform:rotate(5deg)}
+.reference-step-2 .reference-step-number{background:#dbff17;box-shadow:0 0 0 4px #dbff1720}
+.reference-step-icon{width:70px;height:78px;transform:rotate(-8deg)}
+.reference-step h3{margin:0 0 9px;font:700 35px/1 var(--hand)}
+.reference-step p{margin:0;font-size:15px;line-height:1.4;letter-spacing:-.025em}
+.reference-home .site-footer{margin-top:0;font-size:11px}
+@media(max-width:1250px){
+  .reference-home .header-nav{margin-left:25px;gap:25px;font-size:14px}.reference-home .brand{font-size:24px}
+  .reference-intro{font-size:16px}.reference-home .primary-link{min-width:235px;font-size:15px}.reference-home .hero-actions{gap:15px}
+  .reference-smiley{width:70px;height:70px;right:0;top:35%;scale:.85}.reference-friends{gap:12px;flex-wrap:wrap}.reference-friend-portraits img{width:42px;height:42px}
+  .reference-step{grid-template-columns:42px 49px minmax(0,1fr);gap:9px}.reference-step-number{width:40px;height:43px;font-size:27px}.reference-step-icon{width:49px;height:66px}.reference-step h3{font-size:29px}.reference-step p{font-size:13px}
+}
+@media(max-width:950px){
+  .reference-home .site-header{width:calc(100% - 28px);padding:9px 0;flex-wrap:nowrap;gap:10px}.reference-home .header-nav{display:none}
+  .reference-home .brand{font-size:clamp(17px,3.3vw,26px);gap:7px}.reference-home .brand svg{width:31px;height:31px}.reference-home .header-actions{gap:7px}.reference-home .header-account{min-width:0;padding:8px 13px;font-size:12px}
+  .reference-home .editorial-hero{display:flex;flex-direction:column;min-height:0;padding:24px 20px 35px;overflow:hidden}
+  .reference-copy{width:100%;max-width:590px;margin:auto}.reference-home .reference-title{font-size:clamp(70px,15vw,118px);max-width:520px}.reference-kicker{font-size:29px}.reference-smiley{right:4%;top:34%;scale:1}
+  .reference-question{font-size:42px;margin-top:20px}.reference-intro{font-size:17px}.reference-friends{margin-bottom:20px}.reference-friends p{font-size:13px;max-width:220px}
+  .reference-collage{max-width:720px;margin:16px auto 0;aspect-ratio:1.25}.museum-owner{top:18%}.museum-exhibit-laptop{top:48%}.museum-exhibit-vinyl{top:66%}
+  .reference-steps-grid{grid-template-columns:1fr;gap:30px;max-width:540px;margin:auto}.reference-steps{padding:28px 20px 35px}.reference-steps>h2{font-size:39px;margin-bottom:35px}
+  .reference-step{grid-template-columns:48px 67px minmax(0,1fr);gap:12px}.reference-step h3{font-size:33px}.reference-step-icon{width:65px;height:76px}.reference-step p{font-size:14px}
+}
+@media(max-width:520px){
+  .reference-home .reference-title{font-size:clamp(66px,18.4vw,96px)}.reference-kicker{font-size:25px}.reference-question{font-size:36px}.reference-smiley{top:26%;right:0;scale:.74;transform-origin:right center}
+  .reference-friends{flex-wrap:nowrap;gap:12px}.reference-friend-portraits img{width:36px;height:36px;margin-left:-7px}.reference-friends p{font-size:12px}
+  .reference-collage{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:35px 20px;aspect-ratio:auto;padding:25px 8px 75px}
+  .museum-owner,.museum-exhibit,.museum-more{position:relative;left:auto;right:auto;top:auto;bottom:auto;width:auto;align-self:center}
+  .museum-owner{grid-column:1/-1;width:66%;justify-self:center;margin-bottom:8px;order:0;padding:9px}
+  .museum-owner figcaption{font-size:27px}.museum-exhibit{padding:6px 6px 10px}.museum-exhibit figcaption,.museum-exhibit-laptop figcaption{font-size:24px;max-width:110%}
+  .museum-exhibit-coffee figcaption{top:-16px}.museum-exhibit-vinyl{width:86%;justify-self:center;padding:0}.museum-exhibit-vinyl .museum-photo-button{border-width:13px}
+  .museum-more{margin:0;padding:15px;font-size:26px}.museum-more svg{width:42px}.museum-statement{left:25%;bottom:10px;font-size:33px;padding:10px 18px}
+  .museum-heart{left:77%;top:3%;font-size:70px}.museum-star{left:6%;top:18%;font-size:62px}.museum-squiggle{display:none}
+  .reference-steps>h2{font-size:34px}.reference-step{grid-template-columns:38px 46px minmax(0,1fr);gap:10px}.reference-step-icon{width:45px;height:68px}.reference-step h3{font-size:31px}.reference-step p{font-size:13px}
+}
+@media(prefers-reduced-motion:reduce){.museum-exhibit{transition:none}.museum-exhibit:hover{transform:rotate(var(--tilt))}}

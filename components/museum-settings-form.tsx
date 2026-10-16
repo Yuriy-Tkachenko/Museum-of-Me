@@ -48,7 +48,6 @@ export function MuseumSettingsForm({ initialName, initialUsername, initialTitle,
       const response = await fetch("/api/museums/settings", { method: "PATCH", ...(body instanceof FormData ? {} : { headers: { "Content-Type": "application/json" } }), body });
       const data = await response.json();
       if (response.status === 401) { router.push("/auth"); return; }
-      if (response.status === 403) { router.push("/auth/mfa?next=/dashboard"); return; }
       if (!response.ok) throw new Error(data.error ?? "Could not save your changes.");
       setSaved(true); setEditing(false); router.refresh();
     } catch (saveError) {

@@ -14,8 +14,6 @@ export async function POST(request: Request) {
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user) throw new HttpError(401, "You must be signed in to create a museum.");
-    const { data: aal, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aalError || aal.currentLevel !== "aal2") throw new HttpError(403, "Confirm your Authenticator code before continuing.");
     await rateLimit("museums-global", "all", 200, 3600);
     await rateLimit("museums-user", user.id, 5, 3600);
     const contentType = request.headers.get("content-type") ?? "";

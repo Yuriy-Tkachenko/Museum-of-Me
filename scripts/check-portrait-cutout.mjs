@@ -42,11 +42,10 @@ try {
     await expect(page.getByText('Adjust your photo', { exact: true })).toBeVisible();
     await page.getByLabel('Photo size', { exact: true }).fill('1.2');
     await page.getByRole('button', { name: 'Apply crop', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Remove background', exact: true })).toBeEnabled();
-    await page.getByRole('button', { name: 'Remove background', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Keep original photo', exact: true })).toBeEnabled({ timeout: 60000 });
-    await expect(page.locator('.hero-cutout-portrait')).toBeVisible();
-    assert.equal(await page.evaluate(() => { window.portraitFrameCheck.active = false; return window.portraitFrameCheck.flashed; }), false, 'no oval frame flashes while preparing the cutout');
+    await expect(page.getByRole('button', { name: 'Remove background', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Keep original photo', exact: true })).toHaveCount(0);
+    await expect(page.locator('.hero-uploaded-portrait')).toBeVisible();
+    assert.equal(await page.evaluate(() => { window.portraitFrameCheck.active = false; return window.portraitFrameCheck.flashed; }), false, 'no oval frame flashes while preparing the portrait');
     const encoded = await page.locator('.hero-uploaded-portrait img').evaluate(img => {
       const canvas = document.createElement('canvas'); canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
       canvas.getContext('2d').drawImage(img, 0, 0);
@@ -54,29 +53,16 @@ try {
     });
     const output = Buffer.from(encoded, 'base64');
     const { data, info } = await sharp(output).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-    let transparent = 0, opaque = 0;
-    for (let i = 3; i < data.length; i += 4) { if (data[i] < 20) transparent++; if (data[i] > 240) opaque++; }
-    assert.ok(transparent > info.width * info.height * .1, 'background is transparent');
-    assert.ok(opaque > info.width * info.height * .1, 'person is retained');
+    let opaque = 0;
+    for (let i = 3; i < data.length; i += 4) { if (data[i] > 240) opaque++; }
+    assert.ok(opaque > info.width * info.height * .9, 'the original photo background is retained');
     writeFileSync(`test-results/portrait-cutout-${width}.webp`, output);
     await page.locator('.creation-live-preview').screenshot({ path: `test-results/portrait-cutout-${width}.png` });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    await page.getByRole('button', { name: 'Keep original photo', exact: true }).click();
-    await expect(page.locator('.hero-cutout-portrait')).toHaveCount(0);
-    await expect(page.locator('.hero-uploaded-portrait')).toBeVisible();
-    await page.getByRole('button', { name: 'Remove background', exact: true }).click();
-    await expect(page.locator('.hero-cutout-portrait')).toBeVisible();
     await page.getByRole('button', { name: 'Remove photo', exact: true }).click();
     await expect(page.locator('.hero-personal-monogram')).toBeVisible();
-    console.log(`PASS real segmentation, alpha, original restoration and removal at ${width}px`);
+    console.log(`PASS portrait crop retains its background and has no background-removal action at ${width}px`);
   }
-  // A failed model download keeps the original usable and unlocks the form.
-  await page.goto('http://localhost:3000/create');
-  await page.route('**/models/portrait/**', route => route.abort());
-  await page.getByLabel('Upload your portrait', { exact: true }).setInputFiles({ name: 'portrait.jpg', mimeType: 'image/jpeg', buffer: photo });
-  await expect(page.getByRole('status')).toContainText('Your original is ready to use.', { timeout: 30000 });
-  await expect(page.getByRole('button', { name: 'Remove background', exact: true })).toBeEnabled();
-  await expect(page.locator('.hero-uploaded-portrait')).toBeVisible();
   assert.deepEqual(errors, []);
-  console.log('PASS model failure retains the original photograph; no runtime errors.');
+  console.log('PASS portrait creation has no background-removal flow or runtime errors.');
 } finally { await browser.close(); }

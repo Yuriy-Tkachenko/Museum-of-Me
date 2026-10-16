@@ -1,6 +1,7 @@
 export const analyticsEvents = ["landing_view", "create_started", "signup_completed", "museum_created", "invite_copied", "invite_opened", "exhibit_started", "exhibit_submitted", "viral_cta_clicked", "museum_unlocked", "museum_viewed", "museum_shared"] as const;
 export type AnalyticsEvent = typeof analyticsEvents[number];
 export type AnalyticsProps = { museum?: string; source?: "landing" | "exhibit" | "reveal" | "direct"; method?: "copy" | "native" | "download"; format?: "story" | "square" | "og"; target?: number };
+export type OperationalEvent = "invite_opened" | "exhibit_started" | "museum_viewed" | "museum_shared";
 
 export function analyticsEndpoint() {
   try {
@@ -37,6 +38,21 @@ export function track(event: AnalyticsEvent, props: AnalyticsProps = {}, onceKey
   void fetch(endpoint, { method: "POST", credentials: "omit", referrerPolicy: "no-referrer", keepalive: true,
     headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ name: event, domain: process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN, url: `${window.location.origin}${screen}`, props: safe }),
   }).catch(() => { /* Analytics must never block a user action. */ });
+}
+
+const operationalSeen = new Set<string>();
+export function trackOperational(event: OperationalEvent, props: Pick<AnalyticsProps, "museum" | "method" | "format"> = {}, onceKey?: string) {
+  if (typeof window === "undefined" || !props.museum || !/^[a-f0-9-]{36}$/.test(props.museum)) return;
+  if (event === "museum_shared" && (!["copy", "native", "download"].includes(props.method ?? "") || !["story", "square", "og"].includes(props.format ?? ""))) return;
+  const key = `museum-operational:${event}:${onceKey ?? `${props.museum}:${props.method ?? ""}:${props.format ?? ""}`}`;
+  if (operationalSeen.has(key)) return;
+  try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch { /* storage is optional */ }
+  operationalSeen.add(key);
+  void fetch("/api/analytics/funnel", {
+    method: "POST", credentials: "same-origin", keepalive: true,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event, museum: props.museum, ...(event === "museum_shared" ? { method: props.method, format: props.format } : {}) }),
+  }).catch(() => { /* Operational analytics must never block the product. */ });
 }
 
 export function rememberSource(source: AnalyticsProps["source"]) {

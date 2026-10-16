@@ -206,11 +206,11 @@ function translatePage(locale: "en" | "ru") {
 
 export function LocaleRuntime() {
   useEffect(() => {
-    let currentLocale: "en" | "ru" = "en";
+    let currentLocale: "en" | "ru" = "ru";
     const apply = (locale: "en" | "ru") => { currentLocale = locale; window.requestAnimationFrame(() => translatePage(locale)); };
     let saved: string | null = null;
     try { saved = window.localStorage.getItem("museum-locale"); } catch { /* optional preference */ }
-    if (saved === "ru") apply("ru");
+    apply(saved === "en" ? "en" : "ru");
     const onChange = (event: Event) => apply((event as CustomEvent<"en" | "ru">).detail);
     window.addEventListener("museum-locale-change", onChange);
     const observer = new MutationObserver(() => { if (currentLocale === "ru") translatePage("ru"); });

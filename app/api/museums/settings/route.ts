@@ -13,9 +13,6 @@ export async function PATCH(request: Request) {
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) throw new HttpError(401, "You must be signed in to edit your museum.");
-    const { data: aal, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aalError || aal.currentLevel !== "aal2") throw new HttpError(403, "Confirm your Authenticator code before continuing.");
-
     await rateLimit("museum-settings", user.id, 20, 3600);
     const contentType = request.headers.get("content-type") ?? "";
     let body: unknown;

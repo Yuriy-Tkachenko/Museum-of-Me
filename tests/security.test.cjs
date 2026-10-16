@@ -8,15 +8,15 @@ const ts = require('typescript');
 const sharp = require('sharp');
 
 // Compile the real server modules in isolation, mocking only external boundaries.
-function harness({ rpc = async () => ({ data: 0, error: null }), fetchImpl = global.fetch, from, storage, user = null, mfaLevel = 'aal2' } = {}) {
+function harness({ rpc = async () => ({ data: 0, error: null }), fetchImpl = global.fetch, from, storage, user = null, adminAnalytics } = {}) {
   const jar = new Map();
   const cache = new Map();
   const env = { NODE_ENV: 'production', SECURITY_SECRET: 's'.repeat(64), NEXT_PUBLIC_SITE_URL: 'https://museum.test', TURNSTILE_SECRET_KEY: 'test-secret' };
   function load(name) {
     if (name === 'server-only') return {};
-    if (name === '@/lib/admin-analytics') return { recordMuseumBirth: async () => {} };
+    if (name === '@/lib/admin-analytics') return adminAnalytics ?? { recordMuseumBirth: async () => {}, operationalEventNames: ['invite_opened', 'exhibit_started', 'museum_viewed', 'museum_shared'], saveOperationalEvent: async () => true };
     if (name === 'next/headers') return { cookies: async () => ({ get: (key) => jar.get(key), set: (key, value, options) => jar.set(key, { value, options }) }) };
-    if (name === '@/lib/supabase/server') return { createSupabaseServerClient: async () => ({ auth: { getUser: async () => ({ data: { user } }), mfa: { getAuthenticatorAssuranceLevel: async () => ({ data: { currentLevel: mfaLevel }, error: null }) } } }) };
+    if (name === '@/lib/supabase/server') return { createSupabaseServerClient: async () => ({ auth: { getUser: async () => ({ data: { user } }) } }) };
     if (name === '@/lib/supabase/admin') return { createSupabaseAdminClient: () => ({ rpc, from, storage }) };
     if (!name.startsWith('@/')) return require(name);
     const file = path.resolve(name.slice(2) + '.ts');
@@ -69,6 +69,21 @@ test('origin checks reject cross-site, missing origin, and spoofed forwarded hea
     assert.throws(() => s.requireSameOrigin(new Request('https://museum.test/api', { headers: { origin, 'x-forwarded-host': 'museum.test' } })), { status: 403 });
   }
   s.requireSameOrigin(new Request('https://museum.test/api', { headers: { origin: 'https://museum.test' } }));
+});
+
+test('first-party funnel route validates state and persists no personal content', async () => {
+  const saved = [];
+  const analytics = { operationalEventNames: ['invite_opened', 'exhibit_started', 'museum_viewed', 'museum_shared'],
+    saveOperationalEvent: async (key, event) => { saved.push({ key, event }); return true; } };
+  const builder = { select: () => builder, eq: () => builder, maybeSingle: async () => ({ data: { id: '10000000-0000-4000-8000-000000000001', status: 'collecting' }, error: null }) };
+  const h = harness({ from: () => builder, adminAnalytics: analytics });
+  const museum = '20000000-0000-4000-8000-000000000002';
+  const request = (origin, body) => new Request('https://museum.test/api/analytics/funnel', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  assert.equal((await h.load('@/app/api/analytics/funnel/route').POST(request('https://museum.test', { event: 'invite_opened', museum, email: 'private', text: 'secret' }))).status, 200);
+  assert.equal(saved.length, 1); assert.equal(saved[0].event.event, 'invite_opened'); assert.equal(saved[0].event.museumId, '10000000-0000-4000-8000-000000000001');
+  assert.equal(JSON.stringify(saved[0]).includes('private'), false); assert.equal(JSON.stringify(saved[0]).includes('secret'), false);
+  assert.equal((await h.load('@/app/api/analytics/funnel/route').POST(request('https://evil.test', { event: 'invite_opened', museum }))).status, 403);
+  assert.equal((await h.load('@/app/api/analytics/funnel/route').POST(request('https://museum.test', { event: 'unknown', museum }))).status, 400);
 });
 
 test('actual streamed body size is bounded without Content-Length', async () => {
@@ -152,12 +167,10 @@ test('long museum fields fail and SQL-shaped usernames are rejected', () => {
   assert.equal(updateMuseumDetailsSchema.safeParse({ name: 'Alice', username: 'alice', title: 'Museum', owner_id: 'victim' }).success, false);
 });
 
-test('museum settings require MFA and update only the signed-in owner through the atomic RPC', async () => {
+test('museum settings require Google sign-in and update only the signed-in owner through the atomic RPC', async () => {
   const request = body => new Request('https://museum.test/api/museums/settings', { method: 'PATCH', headers: { origin: 'https://museum.test', 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const valid = { name: 'Alice Smith', username: 'alice_new', title: 'Alice Museum' };
   assert.equal((await harness().load('@/app/api/museums/settings/route').PATCH(request(valid))).status, 401);
-  assert.equal((await harness({ user: { id: 'owner' }, mfaLevel: 'aal1' }).load('@/app/api/museums/settings/route').PATCH(request(valid))).status, 403);
-
   let update;
   const builder = { select: () => builder, eq: () => builder, order: () => builder, limit: () => builder, maybeSingle: async () => ({ data: { id: 'museum-id', portrait_path: null }, error: null }) };
   const h = harness({ user: { id: 'owner' }, from: () => builder, rpc: async (name, args) => {
@@ -258,7 +271,6 @@ test('exhibit route passes text as RPC parameters, exposes no counts and rejects
 test('museum route requires authentication and ignores a forged owner in JSON', async () => {
   const request = () => new Request('https://museum.test/api/museums', { method: 'POST', headers: { origin: 'https://museum.test', 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Alice', username: 'alice', title: 'Museum', requiredExhibits: 5, owner_id: 'victim' }) });
   assert.equal((await harness().load('@/app/api/museums/route').POST(request())).status, 401);
-  assert.equal((await harness({ user: { id: 'aal1-user' }, mfaLevel: 'aal1' }).load('@/app/api/museums/route').POST(request())).status, 403);
   let owner;
   const h = harness({ user: { id: 'verified-user' }, rpc: async (name, args) => {
     if (name === 'create_museum_secure') { owner = args.p_owner; return { data: { slug: 'alice' } }; }

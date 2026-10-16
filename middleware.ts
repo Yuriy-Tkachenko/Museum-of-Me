@@ -25,8 +25,7 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: requestHeaders } });
   const pathname = request.nextUrl.pathname;
   const protectedPath = pathname === "/create" || pathname.startsWith("/create/") || pathname === "/dashboard" || pathname.startsWith("/dashboard/");
-  const mfaPath = pathname === "/auth/mfa";
-  if (!protectedPath && pathname !== "/auth" && !mfaPath) return finish(response);
+  if (!protectedPath && pathname !== "/auth") return finish(response);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) {
@@ -46,16 +45,7 @@ export async function middleware(request: NextRequest) {
   });
   const { data: { user } } = await supabase.auth.getUser();
   if (protectedPath && !user) return finish(NextResponse.redirect(new URL("/auth", request.url)));
-  if (mfaPath && !user) return finish(NextResponse.redirect(new URL("/auth", request.url)));
-  if (user) {
-    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    const currentLevel = aal?.currentLevel;
-    if (protectedPath && currentLevel !== "aal2") {
-      const next = `${pathname}${request.nextUrl.search}`;
-      return finish(NextResponse.redirect(new URL(`/auth/mfa?next=${encodeURIComponent(next)}`, request.url)));
-    }
-    if (pathname === "/auth") return finish(NextResponse.redirect(new URL(currentLevel === "aal2" ? "/dashboard" : "/auth/mfa", request.url)));
-  }
+  if (user && pathname === "/auth") return finish(NextResponse.redirect(new URL("/dashboard", request.url)));
   return finish(response);
 }
 

@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { LandingMotion } from "@/components/landing-motion";
 import { copyText, cancelledShare } from "@/lib/sharing";
-import { track } from "@/lib/analytics";
+import { track, trackOperational } from "@/lib/analytics";
 type Format = "story" | "square" | "og";
 
 export function MuseumShare({ slug, name, unlocked, analyticsId }: { slug: string; name: string; unlocked: boolean; analyticsId?: string }) {
@@ -20,7 +20,7 @@ export function MuseumShare({ slug, name, unlocked, analyticsId }: { slug: strin
   const [retry, setRetry] = useState(0);
   const posterUrl = `/api/museums/${encodeURIComponent(slug)}/poster?format=${format}&v=${retry}`;
   const galleryUrl = () => `${window.location.origin}/museum/${encodeURIComponent(slug)}`;
-  function recorded(method: "copy" | "native" | "download") { if (unlocked) track("museum_shared", { museum: analyticsId, method, format }); }
+  function recorded(method: "copy" | "native" | "download") { if (unlocked) { track("museum_shared", { museum: analyticsId, method, format }); trackOperational("museum_shared", { museum: analyticsId, method, format }); } }
   async function download() {
     setBusy(true); setError("");
     try {

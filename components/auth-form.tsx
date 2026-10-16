@@ -30,6 +30,6 @@ export function AuthForm() {
       {loading ? "One moment…" : "Continue with Google ↗"}
     </Button>
     {error && <p role="alert" className="rounded-xl bg-red-100 p-4 text-sm text-red-800">{error}</p>}
-    <p className="text-center text-xs leading-relaxed text-muted">After Google, confirm your sign-in with a code from Google Authenticator.</p>
+    <p className="text-center text-xs leading-relaxed text-muted">Your Google password is entered only on Google’s secure sign-in page and is never shared with Museum of Me.</p>
   </div>;
 }

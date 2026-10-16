@@ -1,5 +1,14 @@
 import type { Metadata } from "next";
+import "@fontsource-variable/onest";
+import "@fontsource-variable/brygada-1918";
+import "@fontsource-variable/brygada-1918/wght-italic.css";
+import "@fontsource/rubik-dirt";
+import "@fontsource/neucha";
+import "@fontsource/permanent-marker";
+import "@fontsource/caveat/700.css";
 import "./globals.css";
+import "./scrapbook.css";
+import "./reference-landing.css";
 import { LocaleRuntime } from "@/components/locale-runtime";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";

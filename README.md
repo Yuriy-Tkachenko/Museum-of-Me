@@ -25,15 +25,15 @@ npm start
 
 ## Administrator panel
 
-Run `node scripts/prepare-admin.mjs` once with your Supabase keys in `.env.local`. It creates the private `museum-admin-analytics` bucket, generates a separate administrator login, stores only a salted scrypt password hash and session secret in server ENV, and saves the generated login/password to ignored `.local-admin-account.txt`. Rebuild and restart, then open `/admin/login`. Do not publish the credentials file. Set `ADMIN_LOGIN`, `ADMIN_PASSWORD_HASH`, and `ADMIN_SESSION_SECRET` as sensitive server variables when deploying; changing the hash or session secret invalidates existing administrator sessions. No additional SQL is required.
+Run `node scripts/prepare-admin.mjs` with your Supabase keys in `.env.local`. It creates the private `museum-admin-analytics` bucket, restricts administration to `ADMIN_EMAIL` (default: `yuriy.tk4ko@gmail.com`), and generates a session secret when missing. Rebuild and restart, then open `/admin/login`. The administrator first signs in through Google on Google’s own page and then confirms the TOTP factor attached to that Supabase account. If no factor exists, the page displays a QR code for Google Authenticator. The app never receives or stores the Google password. Set `ADMIN_EMAIL` and `ADMIN_SESSION_SECRET` as server variables in production; changing either invalidates administrator sessions. No additional SQL is required.
 
-The Russian panel shows all Supabase Auth accounts, profile usernames and museum links. User passwords cannot be retrieved; the panel never collects them. Administrator sessions are independent of museum accounts, last eight hours, and use signed HttpOnly cookies. Login requests are limited through the database. Data is checked server-side on every page load. `node scripts/check-admin.mjs` verifies the complete flow against the local server using disposable, isolated accounts and cleans its own records and events.
+The Russian panel shows all Supabase Auth accounts, profile usernames and museum links. User passwords cannot be retrieved; the panel never collects them. Administrator sessions require the configured Google identity plus TOTP, last eight hours, and use signed HttpOnly cookies. Login requests are limited through the database. Data is checked server-side on every page load. `node scripts/check-admin.mjs` verifies panel access and analytics with disposable, isolated records; Google OAuth itself remains a manual provider check.
 
 Museums with at least one response and fully opened museums come from current database records. Verified post-submission CTA clicks and parent/child museum relationships are stored as private JSON events from setup onward. Repeated clicks are deduplicated per browser and originating museum; the overall participant count deduplicates browsers across museums. Attribution uses the latest signed first-party referral within 30 days, in the same browser, and works through Google login. Gallery CTA referrals are also attributed. Deleted museums are excluded from current metrics. The average offspring count is attributed child museums divided by all current museums. Past clicks cannot be recovered; network failures can undercount events. Keep the analytics bucket private and include it in operational backups and removal procedures.
 
 ## Environment variables reference
 
-Owners sign in only through Google OAuth and then confirm a six-digit TOTP code. On first sign-in the app shows a QR code to enroll Google Authenticator; later sessions require the current authenticator code. Supabase TOTP MFA must remain enabled.
+Museum owners sign in only through Google OAuth. Their Google email and password are entered on Google’s own page and are never sent to Museum of Me. No additional Authenticator step is required for owners. The administrator panel accepts only `yuriy.tk4ko@gmail.com` (or an explicit `ADMIN_EMAIL` override) and then requires a six-digit Google Authenticator code.
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
@@ -42,6 +42,8 @@ Owners sign in only through Google OAuth and then confirm a six-digit TOTP code.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Public anon key; RLS protects browser access. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-only Service Role key. Never prefix with `NEXT_PUBLIC_`. |
 | `SECURITY_SECRET` | Yes | Server-only random secret, at least 32 characters, identical on every instance. |
+| `ADMIN_EMAIL` | Admin panel | The only Google account allowed into the panel; defaults to `yuriy.tk4ko@gmail.com`. |
+| `ADMIN_SESSION_SECRET` | Admin panel | Server-only secret used to sign the eight-hour administrator session. |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | For submissions | Cloudflare widget site key. |
 | `TURNSTILE_SECRET_KEY` | For submissions | Server-only Cloudflare secret. |
 | `PEXELS_API_KEY` | Optional | Server-only Pexels key. Without it, image search is disabled; uploads/text still work. |
@@ -77,7 +79,7 @@ npx supabase link --project-ref YOUR_PROJECT_REF
 npx supabase db push
 ```
 
-Configure Auth → URL Configuration with the production Site URL and explicit redirect URLs such as `https://your-domain/auth/callback`. Add `http://localhost:3000/auth/callback` for local development. Configure Google as the only public sign-in provider, add its Client ID and Client Secret in Supabase, and add the Supabase callback URL to the Google OAuth client. Keep TOTP enrollment and verification enabled in Supabase Auth. No SMTP service is needed for this sign-in flow.
+Configure Auth → URL Configuration with the production Site URL and explicit redirect URLs such as `https://your-domain/auth/callback`. Add `http://localhost:3000/auth/callback` for local development. Configure Google as the only public sign-in provider, add its Client ID and Client Secret in Supabase, and add the Supabase callback URL to the Google OAuth client. Supabase TOTP enrollment is not used for museum-owner accounts. No SMTP service is needed for this sign-in flow.
 
 The `exhibits` bucket is created by migrations and must remain private. Do not add public upload/read policies. New uploads are decoded and re-encoded on the server; signed URLs are issued only after reveal. See [SECURITY.md](SECURITY.md) for access rules, rate limits and migration notes for existing files. For removal requests, a trusted operator removes Storage objects and exhibit rows first, then the museum/account; never expose Service Role operations to visitors.
 
@@ -119,6 +121,8 @@ Only event names, a random non-secret collection identifier (`museum`), creation
 
 The last two are **collection cohorts across different people**, not visitor-session funnels. Use Plausible custom-property exports/grouping to join on `museum` within a chosen observation window (e.g. seven days); raw event-count ratios are not equivalent. `museum_unlocked` comes from the exact successful database transition and is emitted by the final contributor. Shares are recorded after successful copy/native share or initiating a validated PNG download, not on cancelled share dialogs. Analytics is best effort: blockers, closed tabs and network failures can undercount; operational counts remain in PostgreSQL.
 
+The private `/admin?tab=analytics` dashboard also keeps first-party, pseudonymous funnel events in the private `museum-admin-analytics` Supabase Storage bucket. It measures unique invitation opens, form starts, open-gallery views, and successful share actions independently of Plausible. Replies and museum status come directly from PostgreSQL. No email, name, invite token, memory text, image, slug, full URL, or referrer is stored in these funnel events. Existing projects only begin accumulating the new funnel stages after deploying this version; historical browser actions cannot be reconstructed.
+
 ## Checks and Playwright smoke tests
 
 ```sh
@@ -154,6 +158,6 @@ Screenshots and failure traces are saved under `test-results/`; open the report 
 3. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS origin. Configure the same origin in Supabase Auth and Google OAuth redirects and its hostname in Turnstile. Set a real support contact.
 4. Apply all pending Supabase migrations **before** deploying this version. Never make the Storage bucket public to troubleshoot uploads.
 5. Deploy. Changes to `NEXT_PUBLIC_*` require a rebuild/redeploy. Give previews their own Supabase project and matching URL/widget configuration rather than sharing production data.
-6. On the deployed URL, sign in through Google, enroll and verify Google Authenticator, create a museum, contribute from separate friend browsers, verify the locked state, reach the threshold, open the gallery and download/share a poster. Check repeat MFA sign-in, actual Turnstile, private file access, and your analytics goals.
+6. On the deployed URL, sign in through Google, create a museum, contribute from separate friend browsers, verify the locked state, reach the threshold, open the gallery and download/share a poster. Separately verify administrator Google login with `ADMIN_EMAIL` and the current Authenticator code, actual Turnstile, private file access, and your analytics goals.
 
 This repository contains deployment configuration and reproducible tests. Publication still requires access to your Vercel account and production Supabase/Turnstile credentials; running local smoke tests does not publish a site.

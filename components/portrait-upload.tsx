@@ -7,7 +7,7 @@ import { removePortraitBackground } from "@/lib/portrait-cutout";
 
 export type PortraitDraft = { file: File; preview: string };
 
-export function PortraitUpload({ value, initialPreview = null, onChange, onBusy, disabled }: { value: PortraitDraft | null; initialPreview?: string | null; onChange: (value: PortraitDraft | null) => void; onBusy: (busy: boolean) => void; disabled: boolean }) {
+export function PortraitUpload({ value, initialPreview = null, onChange, onBusy, disabled, allowBackgroundRemoval = true }: { value: PortraitDraft | null; initialPreview?: string | null; onChange: (value: PortraitDraft | null) => void; onBusy: (busy: boolean) => void; disabled: boolean; allowBackgroundRemoval?: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -115,7 +115,7 @@ export function PortraitUpload({ value, initialPreview = null, onChange, onBusy,
       const cropped = new File([blob], "portrait.webp", { type: "image/webp" });
       originalRef.current = cropped; cutoutRef.current = null;
       show(cropped, false); URL.revokeObjectURL(cropSource.preview); setCropSource(null);
-      setMessage("Crop applied. You can remove the background if you want.");
+      setMessage(allowBackgroundRemoval ? "Crop applied. You can remove the background if you want." : "Crop applied.");
     } catch { setError("We could not crop this photo. Try again or keep the full photo."); setMessage(""); }
     finally { bitmap?.close(); setBusy(false); onBusy(false); }
   }
@@ -123,7 +123,7 @@ export function PortraitUpload({ value, initialPreview = null, onChange, onBusy,
     if (!cropSource) return;
     originalRef.current = cropSource.file; cutoutRef.current = null;
     onChange({ file: cropSource.file, preview: cropSource.preview });
-    setCutout(false); setCropSource(null); setMessage("Full photo kept. You can remove the background if you want.");
+    setCutout(false); setCropSource(null); setMessage(allowBackgroundRemoval ? "Full photo kept. You can remove the background if you want." : "Full photo kept.");
   }
   function cancelCrop() {
     if (!cropSource) return;
@@ -134,7 +134,7 @@ export function PortraitUpload({ value, initialPreview = null, onChange, onBusy,
     <div className={`portrait-upload-panel ${displayedPreview ? "has-portrait" : ""} ${cutout ? "has-cutout" : "has-original"}`}>
       <div className="portrait-upload-thumbnail" aria-hidden="true">{displayedPreview ? <img src={displayedPreview} alt="" /> : <AnonymousAvatar />}</div>
       <div><p>{displayedPreview ? "A little more you." : "Put yourself at the centre."}</p><small>A clear photo of your face works best. Your portrait appears in your gallery when it opens.</small>
-        <div className="portrait-upload-actions">{initialPreview && !value && <button type="button" disabled={busy || disabled} onClick={() => void editCurrent()}>{busy ? "Preparing your portrait…" : "Adjust current photo"}</button>}<button type="button" disabled={busy || disabled} onClick={() => inputRef.current?.click()}>{busy ? "Preparing your portrait…" : displayedPreview ? "Upload new photo" : "Upload your photo"}<span aria-hidden="true">↗</span></button>{value && <button type="button" disabled={busy || disabled} onClick={() => void toggleBackground()}>{cutout ? "Keep original photo" : "Remove background"}</button>}{displayedPreview && <button type="button" disabled={busy || disabled} className="portrait-remove" onClick={() => { onChange(null); originalRef.current = null; cutoutRef.current = null; setCutout(false); setError(""); setMessage(""); }}>Remove photo</button>}</div>
+        <div className="portrait-upload-actions">{initialPreview && !value && <button type="button" disabled={busy || disabled} onClick={() => void editCurrent()}>{busy ? "Preparing your portrait…" : "Adjust current photo"}</button>}<button type="button" disabled={busy || disabled} onClick={() => inputRef.current?.click()}>{busy ? "Preparing your portrait…" : displayedPreview ? "Upload new photo" : "Upload your photo"}<span aria-hidden="true">↗</span></button>{allowBackgroundRemoval && value && <button type="button" disabled={busy || disabled} onClick={() => void toggleBackground()}>{cutout ? "Keep original photo" : "Remove background"}</button>}{displayedPreview && <button type="button" disabled={busy || disabled} className="portrait-remove" onClick={() => { onChange(null); originalRef.current = null; cutoutRef.current = null; setCutout(false); setError(""); setMessage(""); }}>Remove photo</button>}</div>
       </div>
     </div>
     <input ref={inputRef} aria-label="Upload your portrait" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" disabled={busy || disabled} onChange={event => { const file = event.target.files?.[0]; if (file) void choose(file); }} className="sr-only" />

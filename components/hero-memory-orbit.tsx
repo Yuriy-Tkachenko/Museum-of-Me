@@ -8,7 +8,7 @@ import { hasPortraitTransparency } from "@/lib/portrait-cutout";
 
 // A single clock keeps all six memories on the same continuous elliptical path.
 // DOM transforms avoid re-rendering React on every animation frame.
-export function HeroMemoryOrbit({ compact = false, interactive = true, name = "Mila", portraitUrl, memories = sampleMemories, hidden = false, showPersonalEdit = false }: { compact?: boolean; interactive?: boolean; name?: string; portraitUrl?: string | null; memories?: Memory[]; hidden?: boolean; showPersonalEdit?: boolean }) {
+export function HeroMemoryOrbit({ compact = false, collage = false, interactive = true, name = "Mila", portraitUrl, memories = sampleMemories, hidden = false, showPersonalEdit = false }: { compact?: boolean; collage?: boolean; interactive?: boolean; name?: string; portraitUrl?: string | null; memories?: Memory[]; hidden?: boolean; showPersonalEdit?: boolean }) {
   const items: Memory[] = hidden ? Array.from({ length: 6 }, (_, index) => ({ id: `hidden-${index}`, title: "Still a secret", caption: "", imageUrl: null, symbol: "✦" })) : memories.slice(0, 6);
   const [portraitShape, setPortraitShape] = useState<{ url: string; cutout: boolean } | null>(null);
   const imageUrl = portraitUrl === undefined ? "/images/hero-woman-v2.webp" : portraitUrl ? portraitShape?.url ?? null : null;
@@ -54,6 +54,7 @@ export function HeroMemoryOrbit({ compact = false, interactive = true, name = "M
   }, [paused]);
 
   useEffect(() => {
+    if (collage) return;
     const scene = sceneRef.current;
     if (!scene) return;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -92,9 +93,9 @@ export function HeroMemoryOrbit({ compact = false, interactive = true, name = "M
     positionCards();
     frame = requestAnimationFrame(animate);
     return () => { cancelAnimationFrame(frame); observer.disconnect(); };
-  }, [paused, selected, hovered, focused, items.length]);
+  }, [paused, selected, hovered, focused, items.length, collage]);
 
-  return <div className={`hero-orbit-wrap ${compact ? "hero-orbit-compact" : ""}`}>
+  return <div className={`hero-orbit-wrap ${compact ? "hero-orbit-compact" : ""} ${collage ? "scrapbook-collage" : ""}`}>
     <div className="hero-exhibit-label"><span>THE HUMAN COLLECTION</span>{portraitUrl === undefined ? <span>NO. 001 / MILA</span> : showPersonalEdit ? <button type="button" className="hero-edit-details" onClick={() => window.dispatchEvent(new Event("museum-edit-personal-information"))}><span className="hero-edit-en" translate="no">Edit</span><span className="hero-edit-ru" translate="no">Редактировать</span></button> : <span>YOUR PERSONAL COLLECTION</span>}</div>
     <div ref={sceneRef} className={`hero-orbit-scene ${preview && selected === null ? "has-memory-preview" : ""} ${portraitUrl !== undefined ? "hero-personal-scene" : ""} ${isCutout ? "has-cutout-portrait" : ""}`} aria-label={`${name || "You"} surrounded by memories`}>
       <div className="hero-portrait-halo" aria-hidden="true" />
@@ -110,8 +111,9 @@ export function HeroMemoryOrbit({ compact = false, interactive = true, name = "M
         </motion.div>}
       </AnimatePresence>
       {selected !== null && items[selected] && <div className="hero-memory-detail" role="region" aria-label="Selected memory"><button type="button" aria-label="Close memory" onClick={() => setSelected(null)}>×</button><span className="eyebrow">A friend remembers</span><p translate="no">“{items[selected].caption}”</p><small translate="no">{items[selected].title}</small></div>}
+      {collage && <><span className="collage-vinyl" aria-hidden="true" /><span className="collage-track-note" translate="no">ЭТО ТРЕК</span><span className="collage-statement" translate="no">ЭТО ВСЁ — ТЫ</span><span className="collage-lock-note" translate="no"><b aria-hidden="true">▣</b>ЕЩЁ БОЛЬШЕ<br />ИСТОРИЙ...</span></>}
     </div>
-    <div className={`hero-portrait-signature ${portraitUrl !== undefined ? "hero-personal-signature" : ""}`}><span>A WORLD OF</span><strong translate={name ? "no" : undefined}>{name || "Your name"}{portraitUrl === undefined ? "." : ""}</strong><span>{portraitUrl === undefined ? "AS SEEN BY HER FRIENDS" : "AS SEEN BY YOUR FRIENDS"}</span></div>
+    <div className={`hero-portrait-signature ${portraitUrl !== undefined ? "hero-personal-signature" : ""}`}><span>A WORLD OF</span><strong translate={name ? "no" : undefined}>{collage ? <>MUSEUM<br />OF {(name || "YURI").toUpperCase()}</> : <>{name || "Your name"}{portraitUrl === undefined ? "." : ""}</>}</strong><span>{portraitUrl === undefined ? "AS SEEN BY HER FRIENDS" : "AS SEEN BY YOUR FRIENDS"}</span></div>
     <div className="hero-orbit-toolbar"><span><span aria-hidden="true">↗</span> {hidden ? "Your stories are still a surprise" : canInteract ? "Little things. Real stories. Tap a memory." : "through the eyes of friends"}</span><button type="button" onClick={() => setPaused(value => !value)} aria-label={paused ? "Resume memory motion" : "Pause memory motion"} aria-pressed={paused}><span aria-hidden="true">{paused ? "▷" : "Ⅱ"}</span> {paused ? "Play motion" : "Pause motion"}</button></div>
   </div>;
 }
